@@ -243,6 +243,7 @@ bool EntityBase::IsPoint() const {
         case Type::POINT_IN_2D:
         case Type::POINT_N_COPY:
         case Type::POINT_N_TRANS:
+        case Type::POINT_SCALE_TRANS:
         case Type::POINT_N_ROT_TRANS:
         case Type::POINT_N_ROT_AA:
             return true;
@@ -428,6 +429,17 @@ void EntityBase::PointForceTo(Vector p) {
             break;
         }
 
+        case Type::POINT_SCALE_TRANS: {
+            if(timesApplied == 0) break;
+            Vector center = Vector::From(param[4], param[5], param[6]);
+            Vector sp = numPoint.Minus(center).ScaledBy(SK.GetParam(param[3])->val).Plus(center);
+            Vector trans = (p.Minus(sp));
+            SK.GetParam(param[0])->val = trans.x;
+            SK.GetParam(param[1])->val = trans.y;
+            SK.GetParam(param[2])->val = trans.z;
+            break;
+        }
+
         case Type::POINT_N_ROT_TRANS: {
             // Force only the translation; leave the rotation unchanged. But
             // remember that we're working with respect to the rotated
@@ -489,6 +501,18 @@ Vector EntityBase::PointGetNum() const {
             break;
         }
 
+        case Type::POINT_SCALE_TRANS: {
+            Vector trans = Vector::From(param[0], param[1], param[2]);
+            Vector center = Vector::From(param[4], param[5], param[6]);
+            if (timesApplied == 0) {
+                p = numPoint;
+            } else {
+                p = numPoint.Minus(center).ScaledBy(SK.GetParam(param[3])->val)
+                     .Plus(center).Plus(trans);
+            }
+            break;
+        }
+
         case Type::POINT_N_ROT_TRANS: {
             Vector offset = Vector::From(param[0], param[1], param[2]);
             Quaternion q = PointGetQuaternion();
@@ -535,6 +559,19 @@ ExprVector EntityBase::PointGetExprs() const {
             ExprVector orig = ExprVector::From(numPoint);
             ExprVector trans = ExprVector::From(param[0], param[1], param[2]);
             r = orig.Plus(trans.ScaledBy(Expr::From(timesApplied)));
+            break;
+        }
+        case Type::POINT_SCALE_TRANS: {
+            ExprVector orig = ExprVector::From(numPoint);
+            ExprVector trans = ExprVector::From(param[0], param[1], param[2]);
+            ExprVector center = ExprVector::From(param[4], param[5], param[6]);
+            if (timesApplied != 0) {
+            r = orig.Minus(center).ScaledBy(Expr::From(param[3])).Plus(center).Plus(trans);
+//            r = orig.ScaledBy(Expr::From(param[3])).Plus(center.ScaledBy(Expr::From(1.0)->Minus(Expr::From(param[3])) ))
+//                  .Plus(trans);
+            } else {
+                r = orig;
+            }
             break;
         }
         case Type::POINT_N_ROT_TRANS: {

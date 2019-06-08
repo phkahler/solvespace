@@ -288,6 +288,7 @@ public:
     Point2d         cached;
 
     static SSurface FromExtrusionOf(SBezier *spc, Vector t0, Vector t1);
+    static SSurface FromTaperedExtrusionOf(SBezier *sb, Vector t0, Vector t1, Vector origin, double s0, double s1);
     static SSurface FromRevolutionOf(SBezier *sb, Vector pt, Vector axis, double thetas,
                                      double thetaf, double dists, double distf);
     static SSurface FromPlane(Vector pt, Vector u, Vector v);
@@ -382,6 +383,8 @@ public:
 
     void MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1,
                              RgbaColor color);
+    void MakeFrustumOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Vector center,
+                             double scale0, double scale1, RgbaColor color);
     bool CheckNormalAxisRelationship(SBezierLoopSet *sbls, Vector pt, Vector axis);
     void MakeFromRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis,
                               RgbaColor color, Group *group);

@@ -86,6 +86,7 @@ void Entity::GetReferencePoints(std::vector<Vector> *refs) {
     switch(type) {
         case Type::POINT_N_COPY:
         case Type::POINT_N_TRANS:
+        case Type::POINT_SCALE_TRANS:
         case Type::POINT_N_ROT_TRANS:
         case Type::POINT_N_ROT_AA:
         case Type::POINT_IN_3D:
@@ -500,6 +501,7 @@ void Entity::Draw(DrawAs how, Canvas *canvas) {
     switch(type) {
         case Type::POINT_N_COPY:
         case Type::POINT_N_TRANS:
+        case Type::POINT_SCALE_TRANS:
         case Type::POINT_N_ROT_TRANS:
         case Type::POINT_N_ROT_AA:
         case Type::POINT_IN_3D:

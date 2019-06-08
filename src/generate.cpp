@@ -444,6 +444,7 @@ void SolveSpaceUI::MarkDraggedParams() {
         if(pt) {
             switch(pt->type) {
                 case Entity::Type::POINT_N_TRANS:
+                case Entity::Type::POINT_SCALE_TRANS:
                 case Entity::Type::POINT_IN_3D:
                     sys.dragged.Add(&(pt->param[0]));
                     sys.dragged.Add(&(pt->param[1]));

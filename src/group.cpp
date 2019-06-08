@@ -147,7 +147,7 @@ void Group::MenuGroup(Command id, Platform::Path linkFile) {
                 return;
             }
             break;
-
+/*
         case Command::GROUP_EXTRUDE:
             if(!SS.GW.LockedInWorkplane()) {
                 Error(_("Activate a workplane (Sketch -> In Workplane) before "
@@ -160,6 +160,21 @@ void Group::MenuGroup(Command id, Platform::Path linkFile) {
             g.predef.entityB = SS.GW.ActiveWorkplane();
             g.subtype = Subtype::ONE_SIDED;
             g.name = C_("group-name", "extrude");
+            break;
+*/
+        case Command::GROUP_EXTRUDE:  // FRUSTUM
+            if(!SS.GW.LockedInWorkplane() || (gs.points != 1)) {
+                Error(_("Activate a workplane (Sketch -> In Workplane) before "
+                        "extruding. The sketch will be extruded normal to the "
+                        "workplane."));
+                return;
+            }
+            g.predef.origin = gs.point[0];
+            g.type = Type::FRUSTUM;
+            g.opA = SS.GW.activeGroup;
+            g.predef.entityB = SS.GW.ActiveWorkplane();
+            g.subtype = Subtype::ONE_SIDED;
+            g.name = C_("group-name", "frustum");
             break;
 
         case Command::GROUP_LATHE:
@@ -474,6 +489,51 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             return;
         }
 
+        case Type::FRUSTUM: {
+            Vector center = SK.GetEntity(predef.origin)->PointGetNum();
+
+            AddParam(param, h.param(0), gn.x);
+            AddParam(param, h.param(1), gn.y);
+            AddParam(param, h.param(2), gn.z);
+
+            // The free parameter for relative size
+            AddParam(param, h.param(3), 0.5);
+
+            AddParam(param, h.param(4), center.x);
+            AddParam(param, h.param(5), center.y);
+            AddParam(param, h.param(6), center.z);
+
+            int ai, af;
+            ai = 0; af = 1;
+            // Get some arbitrary point in the sketch, that will be used
+            // as a reference when defining top and bottom faces.
+            hEntity pt = { 0 };
+            for(i = 0; i < entity->n; i++) {
+                Entity *e = &(entity->elem[i]);
+                if(e->group.v != opA.v) continue;
+
+                if(e->IsPoint()) pt = e->h;
+
+                e->CalculateNumerical(/*forExport=*/false);
+                hEntity he = e->h; e = NULL;
+                // As soon as I call CopyEntity, e may become invalid! That
+                // adds entities, which may cause a realloc.
+                CopyEntity(entity, SK.GetEntity(he), ai, REMAP_BOTTOM,
+                    h.param(0), h.param(1), h.param(2),
+                    h.param(3), h.param(4), h.param(5), h.param(6),
+                    CopyAs::NUMERIC);
+                CopyEntity(entity, SK.GetEntity(he), af, REMAP_TOP,
+                    h.param(0), h.param(1), h.param(2),
+                    h.param(3), h.param(4), h.param(5), h.param(6),
+                    CopyAs::SCALE_TRANS);
+                MakeExtrusionLines(entity, he);
+            }
+            // Remapped versions of that arbitrary point will be used to
+            // provide points on the plane faces.
+            MakeExtrusionTopBottomFaces(entity, pt);
+            return;
+        }
+
         case Type::LATHE: {
             Vector axis_pos = SK.GetEntity(predef.origin)->PointGetNum();
             Vector axis_dir = SK.GetEntity(predef.entityB)->VectorGetNum();
@@ -701,6 +761,15 @@ void Group::GenerateEquations(IdList<Equation,hEquation> *l) {
             AddEq(l, u.Dot(extruden), 0);
             AddEq(l, v.Dot(extruden), 1);
         }
+    } else if(type == Type::FRUSTUM) {
+        if(predef.entityB != Entity::FREE_IN_3D) {
+            // The center for scaling is locked in place
+            Vector center = SK.GetEntity(predef.origin)->PointGetNum();
+
+            AddEq(l, Expr::From(h.param(4))->Minus(Expr::From(center.x)), 0);
+            AddEq(l, Expr::From(h.param(5))->Minus(Expr::From(center.y)), 1);
+            AddEq(l, Expr::From(h.param(6))->Minus(Expr::From(center.z)), 2);
+        }
     } else if(type == Type::TRANSLATE) {
         if(predef.entityB != Entity::FREE_IN_3D) {
             Entity *w = SK.GetEntity(predef.entityB);
@@ -893,11 +962,21 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
         case Entity::Type::POINT_N_ROT_AA:
         case Entity::Type::POINT_IN_3D:
         case Entity::Type::POINT_IN_2D:
+        case Entity::Type::POINT_SCALE_TRANS:
             if(as == CopyAs::N_TRANS) {
                 en.type = Entity::Type::POINT_N_TRANS;
                 en.param[0] = dx;
                 en.param[1] = dy;
                 en.param[2] = dz;
+            } else if(as == CopyAs::SCALE_TRANS) {
+                en.type = Entity::Type::POINT_SCALE_TRANS;
+                en.param[0] = dx;
+                en.param[1] = dy;
+                en.param[2] = dz;
+                en.param[3] = qw;
+                en.param[4] = qvx;
+                en.param[5] = qvy;
+                en.param[6] = qvz;
             } else if(as == CopyAs::NUMERIC) {
                 en.type = Entity::Type::POINT_N_COPY;
             } else {
@@ -922,7 +1001,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
         case Entity::Type::NORMAL_N_ROT_AA:
         case Entity::Type::NORMAL_IN_3D:
         case Entity::Type::NORMAL_IN_2D:
-            if(as == CopyAs::N_TRANS || as == CopyAs::NUMERIC) {
+            if(as == CopyAs::N_TRANS || as == CopyAs::NUMERIC || as == CopyAs::SCALE_TRANS) {
                 en.type = Entity::Type::NORMAL_N_COPY;
             } else {
                 if(as == CopyAs::N_ROT_AA) {

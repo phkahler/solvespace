@@ -24,6 +24,24 @@ SSurface SSurface::FromExtrusionOf(SBezier *sb, Vector t0, Vector t1) {
     return ret;
 }
 
+SSurface SSurface::FromTaperedExtrusionOf(SBezier *sb, Vector t0, Vector t1, Vector origin, double s0, double s1) {
+    SSurface ret = {};
+
+    ret.degm = sb->deg;
+    ret.degn = 1;
+
+    int i;
+    for(i = 0; i <= ret.degm; i++) {
+        ret.ctrl[i][0] = (sb->ctrl[i]).Minus(origin).ScaledBy(s0).Plus(origin).Plus(t0);
+        ret.weight[i][0] = sb->weight[i];
+
+        ret.ctrl[i][1] = (sb->ctrl[i]).Minus(origin).ScaledBy(s1).Plus(origin).Plus(t1);
+        ret.weight[i][1] = sb->weight[i];
+    }
+
+    return ret;
+}
+
 bool SSurface::IsExtrusion(SBezier *of, Vector *alongp) const {
     int i;
 
@@ -577,6 +595,122 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
             sc = {};
             sc.isExact = true;
             sc.exact = SBezier::From(pt.Plus(t0), pt.Plus(t1));
+            (sc.exact).MakePwlInto(&(sc.pts));
+            hSCurve hl = curve.AddAndAssignId(&sc);
+            // save this for later
+            TrimLine tl;
+            tl.hc = hl;
+            tl.hs = hsext;
+            trimLines.Add(&tl);
+        }
+
+        int i;
+        for(i = 0; i < trimLines.n; i++) {
+            TrimLine *tl = &(trimLines.elem[i]);
+            SSurface *ss = surface.FindById(tl->hs);
+
+            TrimLine *tlp = &(trimLines.elem[WRAP(i-1, trimLines.n)]);
+
+            STrimBy stb;
+            stb = STrimBy::EntireCurve(this, tl->hc, /*backwards=*/true);
+            ss->trim.Add(&stb);
+            stb = STrimBy::EntireCurve(this, tlp->hc, /*backwards=*/false);
+            ss->trim.Add(&stb);
+
+            (curve.FindById(tl->hc))->surfA = ss->h;
+            (curve.FindById(tlp->hc))->surfB = ss->h;
+        }
+        trimLines.Clear();
+    }
+}
+
+void SShell::MakeFrustumOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Vector center,
+                           double scale0, double scale1, RgbaColor color)
+{
+    // Make the extrusion direction consistent with respect to the normal
+    // of the sketch we're extruding.
+    if((t0.Minus(t1)).Dot(sbls->normal) < 0) {
+        swap(t0, t1);
+        swap(scale0, scale1);
+    }
+
+//TODO: BBox will need to account for scale0 and scale1
+    // Define a coordinate system to contain the original sketch, and get
+    // a bounding box in that csys
+    Vector n = sbls->normal.ScaledBy(-1);
+    Vector u = n.Normal(0), v = n.Normal(1);
+    Vector orig = sbls->point;
+    double umax = 1e-10, umin = 1e10;
+    sbls->GetBoundingProjd(u, orig, &umin, &umax);
+    double vmax = 1e-10, vmin = 1e10;
+    sbls->GetBoundingProjd(v, orig, &vmin, &vmax);
+    // and now fix things up so that all u and v lie between 0 and 1
+    orig = orig.Plus(u.ScaledBy(umin));
+    orig = orig.Plus(v.ScaledBy(vmin));
+    u = u.ScaledBy(umax - umin);
+    v = v.ScaledBy(vmax - vmin);
+
+    // So we can now generate the top and bottom surfaces of the extrusion,
+    // planes within a translated (and maybe mirrored) version of that csys.
+    SSurface s0, s1;
+    s0 = SSurface::FromPlane(orig.Plus(t0), u, v);
+    s0.color = color;
+    s1 = SSurface::FromPlane(orig.Plus(t1).Plus(u), u.ScaledBy(-1), v);
+    s1.color = color;
+    hSSurface hs0 = surface.AddAndAssignId(&s0),
+              hs1 = surface.AddAndAssignId(&s1);
+
+    // Now go through the input curves. For each one, generate its surface
+    // of extrusion, its two translated trim curves, and one trim line. We
+    // go through by loops so that we can assign the lines correctly.
+    SBezierLoop *sbl;
+    for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
+        SBezier *sb;
+        List<TrimLine> trimLines = {};
+
+        for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+            // Generate the surface of extrusion of this curve, and add
+            // it to the list
+            SSurface ss = SSurface::FromTaperedExtrusionOf(sb, t0, t1, center, scale0, scale1);
+            ss.color = color;
+            hSSurface hsext = surface.AddAndAssignId(&ss);
+
+            // Translate the curve by t0 and t1 to produce two trim curves
+            SCurve sc = {};
+            sc.isExact = true;
+            sc.exact = sb->TransformedBy(t0.Plus(center.ScaledBy(1.0-scale0)), Quaternion::IDENTITY, scale0);
+            (sc.exact).MakePwlInto(&(sc.pts));
+            sc.surfA = hs0;
+            sc.surfB = hsext;
+            hSCurve hc0 = curve.AddAndAssignId(&sc);
+
+            sc = {};
+            sc.isExact = true;
+            sc.exact = sb->TransformedBy(t1.Plus(center.ScaledBy(1.0-scale1)), Quaternion::IDENTITY, scale1);
+            (sc.exact).MakePwlInto(&(sc.pts));
+            sc.surfA = hs1;
+            sc.surfB = hsext;
+            hSCurve hc1 = curve.AddAndAssignId(&sc);
+
+            STrimBy stb0, stb1;
+            // The translated curves trim the flat top and bottom surfaces.
+            stb0 = STrimBy::EntireCurve(this, hc0, /*backwards=*/false);
+            stb1 = STrimBy::EntireCurve(this, hc1, /*backwards=*/true);
+            (surface.FindById(hs0))->trim.Add(&stb0);
+            (surface.FindById(hs1))->trim.Add(&stb1);
+
+            // The translated curves also trim the surface of extrusion.
+            stb0 = STrimBy::EntireCurve(this, hc0, /*backwards=*/true);
+            stb1 = STrimBy::EntireCurve(this, hc1, /*backwards=*/false);
+            (surface.FindById(hsext))->trim.Add(&stb0);
+            (surface.FindById(hsext))->trim.Add(&stb1);
+
+            // And form the trim line
+            Vector pt = sb->Finish();
+            sc = {};
+            sc.isExact = true;
+            sc.exact = SBezier::From(pt.Minus(center).ScaledBy(scale0).Plus(center).Plus(t0),
+                                     pt.Minus(center).ScaledBy(scale1).Plus(center).Plus(t1));
             (sc.exact).MakePwlInto(&(sc.pts));
             hSCurve hl = curve.AddAndAssignId(&sc);
             // save this for later
