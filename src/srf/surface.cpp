@@ -606,6 +606,127 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
     }
 }
 
+/* Outline of changes:
+   0) auto create trim curves for n-segment extrusion, revolve, helix
+   1) make a 3 segment extrusion
+   2) offset middle points of curves (2 inner seams first)
+   3) offset end points of curves
+   4) apply to end curves to make chamfers and/or draft angle
+   5) add mid-points to make fillets
+   6) adjust u,v sizes for filleted ends
+*/
+void SShell::MakeComplexExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, RgbaColor color)
+{
+    // Make the extrusion direction consistent with respect to the normal
+    // of the sketch we're extruding.
+    if((t0.Minus(t1)).Dot(sbls->normal) < 0) {
+        swap(t0, t1);
+    }
+
+    // Define a coordinate system to contain the original sketch, and get
+    // a bounding box in that csys
+    Vector n = sbls->normal.ScaledBy(-1);
+    Vector u = n.Normal(0), v = n.Normal(1);
+    Vector orig = sbls->point;
+    double umax = 1e-10, umin = 1e10;
+    sbls->GetBoundingProjd(u, orig, &umin, &umax);
+    double vmax = 1e-10, vmin = 1e10;
+    sbls->GetBoundingProjd(v, orig, &vmin, &vmax);
+    // and now fix things up so that all u and v lie between 0 and 1
+    orig = orig.Plus(u.ScaledBy(umin));
+    orig = orig.Plus(v.ScaledBy(vmin));
+    u = u.ScaledBy(umax - umin);
+    v = v.ScaledBy(vmax - vmin);
+
+    // So we can now generate the top and bottom surfaces of the extrusion,
+    // planes within a translated (and maybe mirrored) version of that csys.
+    SSurface s0, s1;
+    s0 = SSurface::FromPlane(orig.Plus(t0), u, v);
+    s0.color = color;
+    s1 = SSurface::FromPlane(orig.Plus(t1).Plus(u), u.ScaledBy(-1), v);
+    s1.color = color;
+    hSSurface hs0 = surface.AddAndAssignId(&s0),
+              hs1 = surface.AddAndAssignId(&s1);
+
+    // Now go through the input curves. For each one, generate its surface
+    // of extrusion, its two translated trim curves, and one trim line. We
+    // go through by loops so that we can assign the lines correctly.
+    SBezierLoop *sbl;
+    for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
+        SBezier *sb;
+        List<TrimLine> trimLines = {};
+
+        for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+            // Generate the surface of extrusion of this curve, and add
+            // it to the list
+            SSurface ss = SSurface::FromExtrusionOf(sb, t0, t1);
+            ss.color = color;
+            hSSurface hsext = surface.AddAndAssignId(&ss);
+
+            // Translate the curve by t0 and t1 to produce two trim curves
+            SCurve sc = {};
+            sc.isExact = true;
+            sc.exact = sb->TransformedBy(t0, Quaternion::IDENTITY, 1.0);
+            (sc.exact).MakePwlInto(&(sc.pts));
+            sc.surfA = hs0;
+            sc.surfB = hsext;
+            hSCurve hc0 = curve.AddAndAssignId(&sc);
+
+            sc = {};
+            sc.isExact = true;
+            sc.exact = sb->TransformedBy(t1, Quaternion::IDENTITY, 1.0);
+            (sc.exact).MakePwlInto(&(sc.pts));
+            sc.surfA = hs1;
+            sc.surfB = hsext;
+            hSCurve hc1 = curve.AddAndAssignId(&sc);
+
+            STrimBy stb0, stb1;
+            // The translated curves trim the flat top and bottom surfaces.
+            stb0 = STrimBy::EntireCurve(this, hc0, /*backwards=*/false);
+            stb1 = STrimBy::EntireCurve(this, hc1, /*backwards=*/true);
+            (surface.FindById(hs0))->trim.Add(&stb0);
+            (surface.FindById(hs1))->trim.Add(&stb1);
+
+            // The translated curves also trim the surface of extrusion.
+            stb0 = STrimBy::EntireCurve(this, hc0, /*backwards=*/true);
+            stb1 = STrimBy::EntireCurve(this, hc1, /*backwards=*/false);
+            (surface.FindById(hsext))->trim.Add(&stb0);
+            (surface.FindById(hsext))->trim.Add(&stb1);
+
+            // And form the trim line
+            Vector pt = sb->Finish();
+            sc = {};
+            sc.isExact = true;
+            sc.exact = SBezier::From(pt.Plus(t0), pt.Plus(t1));
+            (sc.exact).MakePwlInto(&(sc.pts));
+            hSCurve hl = curve.AddAndAssignId(&sc);
+            // save this for later
+            TrimLine tl;
+            tl.hc = hl;
+            tl.hs = hsext;
+            trimLines.Add(&tl);
+        }
+
+        int i;
+        for(i = 0; i < trimLines.n; i++) {
+            TrimLine *tl = &(trimLines.elem[i]);
+            SSurface *ss = surface.FindById(tl->hs);
+
+            TrimLine *tlp = &(trimLines.elem[WRAP(i-1, trimLines.n)]);
+
+            STrimBy stb;
+            stb = STrimBy::EntireCurve(this, tl->hc, /*backwards=*/true);
+            ss->trim.Add(&stb);
+            stb = STrimBy::EntireCurve(this, tlp->hc, /*backwards=*/false);
+            ss->trim.Add(&stb);
+
+            (curve.FindById(tl->hc))->surfA = ss->h;
+            (curve.FindById(tlp->hc))->surfB = ss->h;
+        }
+        trimLines.Clear();
+    }
+}
+
 bool SShell::CheckNormalAxisRelationship(SBezierLoopSet *sbls, Vector pt, Vector axis, double da, double dx)
 // Check that the direction of revolution/extrusion ends up parallel to the normal of
 // the sketch, on the side of the axis where the sketch is.
@@ -637,9 +758,120 @@ bool SShell::CheckNormalAxisRelationship(SBezierLoopSet *sbls, Vector pt, Vector
     return (vp.Dot(sbls->normal) > 0);
 }
 
-typedef struct {
-    hSSurface d[100];
-} Revolved;
+//-------------------------------------------------------------------------------
+// Create trim curves for a segmented extrusion/revolve/helix with 2 end surfaces
+// Assumes the segments are 2nd order on the extrusion axis (for now). We do not
+// use the original entities to create trim curves because some extrusions may
+// alter the shape of the surface in ways that aren't simple transforms of those.
+// This is to support complex operations like lofting, chamfers, & fillets.
+//-------------------------------------------------------------------------------
+void SShell::MakeTrimCurvesFromSurfaces(List<Revolved> &hsl,
+            hSSurface hs0, hSSurface hs1, int sections, int ncurves)
+{
+    // For each strip created from a curve, we need to create trim curves
+    for(int i = 0; i < ncurves; i++) {
+        Revolved revs = hsl.elem[i], revsp = hsl.elem[WRAP(i - 1, ncurves)];
+
+        // we generate one more curve than there are surfaces (due to end caps)
+        for(int j = 0; j <= sections; j++) {
+            SCurve sc;
+
+            // If this input curve generated a surface, then trim that
+            // surface with the rotated version of the input curve.
+            if(revs.d[0].v) { // d[sections] is out of range check d[0] only.
+
+                SSurface *ss;
+                int x;
+
+                // normally we use the 0th column of control points to stitch
+                // this and the previous surface together
+                if (j < sections) {
+                    ss = surface.FindById(revs.d[j]);
+                    x = 0;
+                } else { // but for the final end cap we use the previous surface
+                    ss = surface.FindById(revs.d[j-1]);
+                    // and the last row of control points
+                    x = ss->degn;
+                }
+                
+                // create a trim curve from the Xth column of control points
+                sc         = {};
+                sc.isExact = true;
+                if (ss->degm == 1) {
+                    sc.exact   = SBezier::From(ss->ctrl[0][x], ss->ctrl[1][x]);
+                } else if (ss->degm == 2) {
+                    sc.exact   = SBezier::From(ss->ctrl[0][x], ss->ctrl[1][x], ss->ctrl[2][x]);
+                    sc.exact.weight[1] = ss->weight[x][1];
+                } else { // must be degree 3
+                    sc.exact   = SBezier::From(ss->ctrl[0][x], ss->ctrl[1][x], ss->ctrl[2][x],
+                                 ss->ctrl[3][x]);
+                    sc.exact.weight[1] = ss->weight[x][1];
+                    sc.exact.weight[2] = ss->weight[x][2];
+                }
+                (sc.exact).MakePwlInto(&(sc.pts));
+
+                // the surfaces already exist so trim with this curve
+                if(j < sections) {
+                    sc.surfA = revs.d[j];
+                } else {
+                    sc.surfA = hs1; // end cap
+                }
+
+                if(j > 0) {
+                    sc.surfB = revs.d[j - 1];
+                } else {
+                    sc.surfB = hs0; // staring cap
+                }
+                hSCurve hcb = curve.AddAndAssignId(&sc);
+
+                STrimBy stb;
+                stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/true);
+                (surface.FindById(sc.surfA))->trim.Add(&stb);
+                stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/false);
+                (surface.FindById(sc.surfB))->trim.Add(&stb);
+            }
+/*            // this code requires the original list of entity curves
+            else if(j == 0) { // curve was on the rotation axis and is shared by the end caps.
+                sc         = {};
+                sc.isExact = true;
+                sc.exact   = sb->TransformedBy(ts, qs, 1.0);
+                (sc.exact).MakePwlInto(&(sc.pts));
+                sc.surfA    = hs1; // end cap
+                sc.surfB    = hs0; // staring cap
+                hSCurve hcb = curve.AddAndAssignId(&sc);
+
+                STrimBy stb;
+                stb = STrimBy::EntireCurve(this, hcb, true); // backwards=true
+                (surface.FindById(sc.surfA))->trim.Add(&stb);
+                stb = STrimBy::EntireCurve(this, hcb, false); // backwards=fales
+                (surface.FindById(sc.surfB))->trim.Add(&stb);
+            }
+*/
+            // If the input curve and the one after it both generated
+            // surfaces, then trim both of those surfaces by the a curve
+            // based on the control points along the axis of extrusion.
+            if((j < sections) && revs.d[j].v && revsp.d[j].v) {
+                SSurface *ss = surface.FindById(revs.d[j]);
+
+                sc         = {};
+                sc.isExact = true;
+                sc.exact   = SBezier::From(ss->ctrl[0][0], ss->ctrl[0][1], ss->ctrl[0][2]);
+                sc.exact.weight[1] = ss->weight[0][1];
+                (sc.exact).MakePwlInto(&(sc.pts));
+                sc.surfA = revs.d[j];
+                sc.surfB = revsp.d[j];
+
+                hSCurve hcc = curve.AddAndAssignId(&sc);
+
+                STrimBy stb;
+                stb = STrimBy::EntireCurve(this, hcc, /*backwards=*/false);
+                (surface.FindById(sc.surfA))->trim.Add(&stb);
+                stb = STrimBy::EntireCurve(this, hcc, /*backwards=*/true);
+                (surface.FindById(sc.surfB))->trim.Add(&stb);
+            }
+        }
+    }
+}
 
 // sketch must not contain the axis of revolution as a non-construction line for helix
 void SShell::MakeFromHelicalRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis,
@@ -725,6 +957,10 @@ void SShell::MakeFromHelicalRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector
             hsl.Add(&revs);
         }
         // Still the same loop. Need to create trim curves
+
+// The simple function doesn't work for revolve around a sketch element
+//        MakeTrimCurvesFromSurfaces(hsl, hs0, hs1, sections, sbl->l.n);
+
         for(i = 0; i < sbl->l.n; i++) {
             Revolved revs = hsl.elem[i], revsp = hsl.elem[WRAP(i - 1, sbl->l.n)];
 

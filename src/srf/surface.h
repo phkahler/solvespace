@@ -375,13 +375,20 @@ public:
 
 class SShell {
 public:
+    typedef struct {
+        hSSurface d[100];
+    } Revolved;
+
     IdList<SCurve,hSCurve>      curve;
     IdList<SSurface,hSSurface>  surface;
 
     bool                        booleanFailed;
 
+    void MakeTrimCurvesFromSurfaces(List<Revolved> &hsl,
+            hSSurface hs0, hSSurface hs1, int sections, int ncurves);
     void MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1,
                              RgbaColor color);
+    void MakeComplexExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, RgbaColor color);
     bool CheckNormalAxisRelationship(SBezierLoopSet *sbls, Vector pt, Vector axis, double da, double dx);
     void MakeFromRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis,
                               RgbaColor color, Group *group);
