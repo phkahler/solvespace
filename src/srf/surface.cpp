@@ -606,8 +606,8 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
     }
 }
 
-/* Outline of changes:
-   0) auto create trim curves for n-segment extrusion, revolve, helix
+/* Outline of changes to be made:
+   0) auto create trim curves for n-segment extrusion, revolve, helix  (done)
    1) make a 3 segment extrusion
    2) offset middle points of curves (2 inner seams first)
    3) offset end points of curves
