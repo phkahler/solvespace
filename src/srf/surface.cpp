@@ -608,7 +608,7 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
 
 /* Outline of changes to be made:
    0) auto create trim curves for n-segment extrusion, revolve, helix  (done)
-   1) make a 3 segment extrusion
+   1) make a 3 segment extrusion                                       (done)
    2) offset middle points of curves (2 inner seams first)
    3) offset end points of curves
    4) apply to end curves to make chamfers and/or draft angle
@@ -648,15 +648,15 @@ void SShell::MakeComplexExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, 
     hSSurface hs0 = surface.AddAndAssignId(&s0),
               hs1 = surface.AddAndAssignId(&s1);
 
-    int sections = 1;
-
+    int sections = 3;
+    Vector span = t1.Minus(t0).ScaledBy(1.0/sections);
     // Now go through the input curves. For each one, generate its surface
     // of extrusion, its two translated trim curves, and one trim line. We
     // go through by loops so that we can assign the lines correctly.
     SBezierLoop *sbl;
     for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
 
-        int i, j;
+        int j;
         SBezier *sb;
         List<Revolved> hsl = {};
 
@@ -664,17 +664,9 @@ void SShell::MakeComplexExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, 
         for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
             Revolved revs;
             for(j = 0; j < sections; j++) {
-                SSurface ss = SSurface::FromExtrusionOf(sb, t0, t1);
+                SSurface ss = SSurface::FromExtrusionOf(sb,
+                              t0.Plus(span.ScaledBy(j)),t0.Plus(span.ScaledBy(j+1)));
                 ss.color = color;
-/*                if(sb->entity != 0) {
-                    hEntity he;
-                    he.v          = sb->entity;
-                    hEntity hface = group->Remap(he, Group::REMAP_LINE_TO_FACE);
-                    if(SK.entity.FindByIdNoOops(hface) != NULL) {
-                        ss.face = hface.v;
-                    }
-                }
-*/
                 revs.d[j] = surface.AddAndAssignId(&ss);
             }
             hsl.Add(&revs);
@@ -762,8 +754,8 @@ void SShell::MakeTrimCurvesFromSurfaces(List<Revolved> &hsl,
                 } else { // must be degree 3
                     sc.exact   = SBezier::From(ss->ctrl[0][x], ss->ctrl[1][x], ss->ctrl[2][x],
                                  ss->ctrl[3][x]);
-                    sc.exact.weight[1] = ss->weight[x][1];
-                    sc.exact.weight[2] = ss->weight[x][2];
+                    sc.exact.weight[1] = ss->weight[1][x];
+                    sc.exact.weight[2] = ss->weight[2][x];
                 }
                 (sc.exact).MakePwlInto(&(sc.pts));
 
@@ -787,23 +779,6 @@ void SShell::MakeTrimCurvesFromSurfaces(List<Revolved> &hsl,
                 stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/false);
                 (surface.FindById(sc.surfB))->trim.Add(&stb);
             }
-/*            // this code requires the original list of entity curves
-            else if(j == 0) { // curve was on the rotation axis and is shared by the end caps.
-                sc         = {};
-                sc.isExact = true;
-                sc.exact   = sb->TransformedBy(ts, qs, 1.0);
-                (sc.exact).MakePwlInto(&(sc.pts));
-                sc.surfA    = hs1; // end cap
-                sc.surfB    = hs0; // staring cap
-                hSCurve hcb = curve.AddAndAssignId(&sc);
-
-                STrimBy stb;
-                stb = STrimBy::EntireCurve(this, hcb, true); // backwards=true
-                (surface.FindById(sc.surfA))->trim.Add(&stb);
-                stb = STrimBy::EntireCurve(this, hcb, false); // backwards=fales
-                (surface.FindById(sc.surfB))->trim.Add(&stb);
-            }
-*/
             // If the input curve and the one after it both generated
             // surfaces, then trim both of those surfaces by the a curve
             // based on the control points along the axis of extrusion.
@@ -818,7 +793,7 @@ void SShell::MakeTrimCurvesFromSurfaces(List<Revolved> &hsl,
                     sc.exact   = SBezier::From(ss->ctrl[0][0], ss->ctrl[0][1], ss->ctrl[0][2]);
                 } else { // must be degree 3
                     sc.exact   = SBezier::From(
-                            ss->ctrl[0][0], ss->ctrl[0][1], ss->ctrl[0][2]);
+                            ss->ctrl[0][0], ss->ctrl[0][1], ss->ctrl[0][2], ss->ctrl[0][3]);
                 }
                 sc.exact.weight[1] = ss->weight[0][1];
                 (sc.exact).MakePwlInto(&(sc.pts));
