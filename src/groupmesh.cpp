@@ -229,7 +229,8 @@ void Group::GenerateShellAndMesh() {
         for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
             int is = thisShell.surface.n;
             // Extrude this outer contour (plus its inner contours, if present)
-            thisShell.MakeFromExtrusionOf(sbls, tbot, ttop, color);
+//            thisShell.MakeFromExtrusionOf(sbls, tbot, ttop, color);
+            thisShell.MakeComplexExtrusionOf(sbls, tbot, ttop, color);
 
             // And for any plane faces, annotate the model with the entity for
             // that face, so that the user can select them with the mouse.
