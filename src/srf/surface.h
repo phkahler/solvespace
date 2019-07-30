@@ -288,6 +288,8 @@ public:
     Point2d         cached;
 
     static SSurface FromExtrusionOf(SBezier *spc, Vector t0, Vector t1);
+    static SSurface FromOffsetExtrusionOf(SBezier *sb, SBezier *sbprev, SBezier *sbnext,
+                   Vector t0, Vector t1, Vector n, double d0, double d1);
     static SSurface FromRevolutionOf(SBezier *sb, Vector pt, Vector axis, double thetas,
                                      double thetaf, double dists, double distf);
     static SSurface FromPlane(Vector pt, Vector u, Vector v);

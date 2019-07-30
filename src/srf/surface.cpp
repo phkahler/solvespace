@@ -24,6 +24,51 @@ SSurface SSurface::FromExtrusionOf(SBezier *sb, Vector t0, Vector t1) {
     return ret;
 }
 
+Vector GetOffsetPt(Vector &pt, Vector &prev, Vector &next, Vector &norm, double d)
+{
+    Vector n1 = norm.Cross(next.Minus(pt)).WithMagnitude(1.0); // prependicular to outgoing segment
+    Vector n2 = norm.Cross(pt.Minus(prev)).WithMagnitude(1.0); // prependicular to incoming segment
+    Vector b = n1.Plus(n2).WithMagnitude(1.0); // bisector of the angle
+
+    Vector r = pt.Plus(b.ScaledBy(d/n1.Dot(b)));
+
+    return r;
+}
+
+// Create an extruded surface where each end can be offset by some distance
+SSurface SSurface::FromOffsetExtrusionOf(SBezier *sb, SBezier *sbprev, SBezier *sbnext,
+                   Vector t0, Vector t1, Vector n, double d0, double d1) {
+    SSurface ret = {};
+
+    ret.degm = sb->deg;
+    ret.degn = 1;
+    Vector pt, pnext, pprev;
+    int i;
+    for(i = 0; i <= ret.degm; i++) {
+        pt = sb->ctrl[i];
+        // we need the next and prebious points - on this curve or the previous or next
+        if (i==0) {
+            pprev = sbprev->ctrl[sbprev->deg-1];
+        } else {
+            pprev = sb->ctrl[i-1];
+        }
+        if (i==sb->deg) {
+            pnext = sbnext->ctrl[1];
+        } else {
+            pnext = sb->ctrl[i+1];
+        }
+ 
+        ret.ctrl[i][0] = (GetOffsetPt(sb->ctrl[i], pprev, pnext,n,d0)).Plus(t0);
+        ret.weight[i][0] = sb->weight[i];
+
+        ret.ctrl[i][1] = (GetOffsetPt(sb->ctrl[i], pprev, pnext,n,d1)).Plus(t1);
+        ret.weight[i][1] = sb->weight[i];
+    }
+//test hack    if (sb->deg==2) { ret.weight[1][0] = 10.0; ret.weight[1][1] = 10.0; }
+
+    return ret;
+}
+
 bool SSurface::IsExtrusion(SBezier *of, Vector *alongp) const {
     int i;
 
@@ -609,18 +654,27 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
 /* Outline of changes to be made:
    0) auto create trim curves for n-segment extrusion, revolve, helix  (done)
    1) make a 3 segment extrusion                                       (done)
-   2) offset middle points of curves (2 inner seams first)
-   3) offset end points of curves
+   2) create offset curves for draft angle                             (done)
    4) apply to end curves to make chamfers and/or draft angle
    5) add mid-points to make fillets
    6) adjust u,v sizes for filleted ends
 */
 void SShell::MakeComplexExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, RgbaColor color)
 {
+    int bOpts = 1; // Bottom Options 1=chamfer in 2=chamfer out 3=fillet out 4=fillet in
+    int tOpts = 1; // Top Options
+
+    Vector dir = t1.Minus(t0);
+//    double d = dir.Magnitude();
+    double d1 = -4.0, d2 = 7.0;
+
     // Make the extrusion direction consistent with respect to the normal
     // of the sketch we're extruding.
     if((t0.Minus(t1)).Dot(sbls->normal) < 0) {
         swap(t0, t1);
+        swap(tOpts, bOpts);
+        swap(d1, d2);
+        dir = dir.ScaledBy(-1);
     }
 
     // Define a coordinate system to contain the original sketch, and get
@@ -649,23 +703,69 @@ void SShell::MakeComplexExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, 
               hs1 = surface.AddAndAssignId(&s1);
 
     int sections = 3;
-    Vector span = t1.Minus(t0).ScaledBy(1.0/sections);
+    int sstage = 0; // start section 1=main extrusion 2=upper feature
+    if(bOpts==0) {
+        sections = 2;
+        sstage = 1;
+        d1 = 0;
+    }
+    if(tOpts==0) {
+        sections--;
+        d2 = 0;
+    }
+
+//    Vector span = t1.Minus(t0).ScaledBy(1.0/sections);
     // Now go through the input curves. For each one, generate its surface
     // of extrusion, its two translated trim curves, and one trim line. We
     // go through by loops so that we can assign the lines correctly.
     SBezierLoop *sbl;
     for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
 
-        int j;
-        SBezier *sb;
+        int i,j;
+        int len = sbl->l.n;
+        SBezier *sb, *sbprev, *sbnext;
         List<Revolved> hsl = {};
-
         // This is where all the NURBS are created and Remapped to the generating curve
-        for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+//        for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+        for(i = 0; i<len; i++) {
+            sb = &sbl->l.elem[i];
+            sbprev = &sbl->l.elem[WRAP(i-1,len)];
+            sbnext = &sbl->l.elem[WRAP(i+1,len)];
+
+            Vector vs,ve;
+            double ds,de;
+            int stage = sstage;
+
             Revolved revs;
-            for(j = 0; j < sections; j++) {
-                SSurface ss = SSurface::FromExtrusionOf(sb,
-                              t0.Plus(span.ScaledBy(j)),t0.Plus(span.ScaledBy(j+1)));
+            for(j = 0; stage < 3; j++) {
+                switch (stage) {
+                case 0: // lower fillet or chamfer
+                    vs = t0;
+                    ve = t0.Plus(dir.WithMagnitude(fabs(d1)));
+                    ds = -d1;
+                    de = 0;
+                    stage = 1;
+                    break;
+                case 1:
+                    vs = t0.Plus(dir.WithMagnitude(fabs(d1)));
+                    ve = t1.Minus(dir.WithMagnitude(fabs(d2)));
+                    ds = 0;
+                    de = 0;
+                    stage = 2;
+                    if (tOpts==0) {
+                        stage = 3;
+                    }
+                    break;
+                case 2:
+                    vs = t1.Minus(dir.WithMagnitude(fabs(d2)));
+                    ve = t1;
+                    ds = 0;
+                    de = -d2;
+                    stage = 3;
+                    break;
+                }
+                SSurface ss = SSurface::FromOffsetExtrusionOf(sb, sbprev, sbnext,
+                    vs, ve, sbls->normal, ds, de);
                 ss.color = color;
                 revs.d[j] = surface.AddAndAssignId(&ss);
             }
@@ -750,7 +850,7 @@ void SShell::MakeTrimCurvesFromSurfaces(List<Revolved> &hsl,
                     sc.exact   = SBezier::From(ss->ctrl[0][x], ss->ctrl[1][x]);
                 } else if (ss->degm == 2) {
                     sc.exact   = SBezier::From(ss->ctrl[0][x], ss->ctrl[1][x], ss->ctrl[2][x]);
-                    sc.exact.weight[1] = ss->weight[x][1];
+                    sc.exact.weight[1] = ss->weight[1][x];
                 } else { // must be degree 3
                     sc.exact   = SBezier::From(ss->ctrl[0][x], ss->ctrl[1][x], ss->ctrl[2][x],
                                  ss->ctrl[3][x]);
