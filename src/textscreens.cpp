@@ -254,6 +254,13 @@ void TextWindow::ScreenChangeExprA(int link, uint32_t v) {
     SS.TW.edit.meaning = Edit::TIMES_REPEATED;
     SS.TW.edit.group.v = v;
 }
+void TextWindow::ScreenChangeDraftAngle(int link, uint32_t v) {
+    Group *g = SK.GetGroup(SS.TW.shown.group);
+
+    SS.TW.ShowEditControl(10, ssprintf("%F", g->valA));
+    SS.TW.edit.meaning = Edit::GROUP_DRAFT_ANGLE;
+    SS.TW.edit.group.v = v;
+}
 void TextWindow::ScreenChangeGroupName(int link, uint32_t v) {
     Group *g = SK.GetGroup(SS.TW.shown.group);
     SS.TW.ShowEditControl(12, g->DescriptionString().substr(5));
@@ -327,6 +334,13 @@ void TextWindow::ShowGroupInfo() {
             one ? RADIO_TRUE : RADIO_FALSE,
             &TextWindow::ScreenChangeGroupOption,
             !one ? RADIO_TRUE : RADIO_FALSE);
+
+        if(g->type == Group::Type::EXTRUDE) {
+            double angle = (g->valA);
+            Printf(false, "%Bp%Ft draft angle%E %@ deg %Fl%Ll%D%f[change]%E", 'd',
+                angle,
+                g->h.v, &TextWindow::ScreenChangeDraftAngle);
+        }
 
         if(g->type == Group::Type::ROTATE || g->type == Group::Type::TRANSLATE) {
             if(g->subtype == Group::Subtype::ONE_SIDED) {
@@ -769,6 +783,20 @@ void TextWindow::EditControlDone(std::string s) {
                 } else {
                     Group *g = SK.GetGroup(edit.group);
                     g->color.alpha = (int)(255.1f * alpha);
+                    SS.MarkGroupDirty(g->h);
+                    SS.GW.ClearSuper();
+                }
+            }
+            break;
+
+        case Edit::GROUP_DRAFT_ANGLE:
+            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+                double angle = e->Eval();
+                if(angle < 0.0 || angle > 20.0) {
+                    Error(_("Angle out of range."));
+                } else {
+                    Group *g = SK.GetGroup(edit.group);
+                    g->valA = angle;
                     SS.MarkGroupDirty(g->h);
                     SS.GW.ClearSuper();
                 }

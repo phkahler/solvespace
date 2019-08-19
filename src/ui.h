@@ -293,6 +293,7 @@ public:
         GROUP_SCALE           = 3,
         GROUP_COLOR           = 4,
         GROUP_OPACITY         = 5,
+        GROUP_DRAFT_ANGLE     = 6,
         // For the configuration screen
         LIGHT_DIRECTION       = 100,
         LIGHT_INTENSITY       = 101,
@@ -458,6 +459,7 @@ public:
 
     // These ones do stuff with the edit control
     static void ScreenChangeExprA(int link, uint32_t v);
+    static void ScreenChangeDraftAngle(int link, uint32_t v);
     static void ScreenChangeGroupName(int link, uint32_t v);
     static void ScreenChangeGroupScale(int link, uint32_t v);
     static void ScreenChangeLightDirection(int link, uint32_t v);

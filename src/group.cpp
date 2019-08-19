@@ -157,6 +157,7 @@ void Group::MenuGroup(Command id, Platform::Path linkFile) {
             }
             g.type = Type::EXTRUDE;
             g.opA = SS.GW.activeGroup;
+            g.valA = 0.0; // default draft angle
             g.predef.entityB = SS.GW.ActiveWorkplane();
             g.subtype = Subtype::ONE_SIDED;
             g.name = C_("group-name", "extrude");
