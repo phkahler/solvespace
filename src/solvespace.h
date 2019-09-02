@@ -323,6 +323,7 @@ public:
     void WriteProductHeader();
     int ExportCurve(SBezier *sb);
     int ExportCurveLoop(SBezierLoop *loop, bool inner);
+    void ExportStyleRGB(int advancedFaceId);
     void ExportSurface(SSurface *ss, SBezierList *sbl);
     void WriteWireframe();
     void WriteFooter();

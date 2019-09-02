@@ -41,14 +41,9 @@ void StepFileWriter::WriteHeader() {
 "PLANE_ANGLE_UNIT()\n"
 "SI_UNIT($,.RADIAN.)\n"
 ");\n"
-"#166=(\n"
-"NAMED_UNIT(*)\n"
-"SI_UNIT($,.STERADIAN.)\n"
-"SOLID_ANGLE_UNIT()\n"
-");\n"
+"#166=( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );\n"
 "#167=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.001),#158,\n"
-"'DISTANCE_ACCURACY_VALUE',\n"
-"'string');\n"
+"'distance_accuracy_value','confusion accuracy');\n"
 "#168=(\n"
 "GEOMETRIC_REPRESENTATION_CONTEXT(3)\n"
 "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#167))\n"
@@ -272,12 +267,14 @@ void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl) {
             if(listOfLoops.NextAfter(fb) != NULL) fprintf(f, ",");
         }
 
+        id++;
+
+        listOfLoops.Clear();
         fprintf(f, "),#%d,.T.);\n", srfid);
         fprintf(f, "\n");
         advancedFaces.Add(&advFaceId);
 
-        id++;
-        listOfLoops.Clear();
+        fprintf(f, "\n");
     }
     sblss.Clear();
     spxyz.Clear();
@@ -290,6 +287,30 @@ void StepFileWriter::WriteFooter() {
 "\n"
 "END-ISO-10303-21;\n"
         );
+}
+
+//        fprintf(f, "#%d=MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',(#%d),#168);\n", id, id + 1);
+//        id++;
+//        fprintf(f, "#%d=COLOUR_RGB('',%f,%f,%f);\n", id, ss->color.redF(), ss->color.greenF(), ss->color.blueF());
+//        id++;
+
+void StepFileWriter::ExportStyleRGB(int advancedFaceId) {
+        fprintf(f, "#%d=STYLED_ITEM('color',(#%d)),#%d);\n", id, id + 1, advancedFaceId);
+        id++;
+        fprintf(f, "#%d=PRESENTATION_STYLE_ASSIGNMENT((#%d));\n", id, id + 1);
+        id++;
+        fprintf(f, "#%d=SURFACE_STYLE_USAGE(.BOTH.,#%d);\n", id, id + 1);
+        id++;
+        fprintf(f, "#%d=SURFACE_SIDE_STYLE('',(#%d));\n", id, id + 1);
+        id++;
+        fprintf(f, "#%d=SURFACE_STYLE_FILL_AREA(#%d);\n", id, id + 1);
+        id++;
+        fprintf(f, "#%d=FILL_AREA_STYLE('',(#%d));\n", id, id + 1);
+        id++;
+        fprintf(f, "#%d=FILL_AREA_STYLE_COLOUR('',(#%d));\n", id, id + 1);
+        id++;
+        fprintf(f, "#%d=DRAUGHTING_PRE_DEFINED_COLOUR('cyan');\n", id);
+        id++;
 }
 
 void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
@@ -349,10 +370,27 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
         id+2, id+1);
     fprintf(f, "#%d=SHAPE_REPRESENTATION_RELATIONSHIP($,$,#169,#%d);\n",
         id+3, id+2);
+    id+=4;
+
+    fprintf(f,"\n");
+
+    // Write a style with color for each face
+    List<int> styleIds = {};
+    for(af = advancedFaces.First(); af; af = advancedFaces.NextAfter(af)) {
+        styleIds.Add(&id);
+        ExportStyleRGB(*af);
+    }
+    fprintf(f, "#%d=MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',(", id);
+    id++;
+    for(af = styleIds.First(); af; af = styleIds.NextAfter(af)) {
+        fprintf(f, "#%d", *af);
+        if(styleIds.NextAfter(af) != NULL) fprintf(f, ",");
+    }
+    fprintf(f, "),168);\n");
 
     WriteFooter();
-
     fclose(f);
+    styleIds.Clear();
     advancedFaces.Clear();
 }
 
