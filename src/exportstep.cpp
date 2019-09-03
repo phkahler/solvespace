@@ -10,51 +10,41 @@ void StepFileWriter::WriteHeader() {
 "ISO-10303-21;\n"
 "HEADER;\n"
 "\n"
-"FILE_DESCRIPTION((''), '2;1');\n"
-"\n"
+"FILE_DESCRIPTION(('SolveSpace Model'), '2;1');\n"
 "FILE_NAME(\n"
-"    'output_file',\n"
+"    '',\n"
 "    '2009-06-07T17:44:47-07:00',\n"
 "    (''),\n"
 "    (''),\n"
+"    'SS AP214 export v0',\n"
 "    'SolveSpace',\n"
-"    '',\n"
 "    ''\n"
 ");\n"
-"\n"
-"FILE_SCHEMA (('CONFIG_CONTROL_DESIGN'));\n"
+"FILE_SCHEMA (('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));\n"
 "ENDSEC;\n"
 "\n"
 "DATA;\n"
-"\n"
 "/**********************************************************\n"
 " * This defines the units and tolerances for the file. It\n"
 " * is always the same, independent of the actual data.\n"
 " **********************************************************/\n"
-"#158=(\n"
-"LENGTH_UNIT()\n"
-"NAMED_UNIT(*)\n"
-"SI_UNIT(.MILLI.,.METRE.)\n"
-");\n"
-"#161=(\n"
-"NAMED_UNIT(*)\n"
-"PLANE_ANGLE_UNIT()\n"
-"SI_UNIT($,.RADIAN.)\n"
-");\n"
-"#166=( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );\n"
-"#167=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.001),#158,\n"
-"'distance_accuracy_value','confusion accuracy');\n"
-"#168=(\n"
-"GEOMETRIC_REPRESENTATION_CONTEXT(3)\n"
-"GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#167))\n"
-"GLOBAL_UNIT_ASSIGNED_CONTEXT((#166,#161,#158))\n"
-"REPRESENTATION_CONTEXT('ID1','3D')\n"
-");\n"
-"#169=SHAPE_REPRESENTATION('',(#170),#168);\n"
-"#170=AXIS2_PLACEMENT_3D('',#173,#171,#172);\n"
-"#171=DIRECTION('',(0.,0.,1.));\n"
-"#172=DIRECTION('',(1.,0.,0.));\n"
-"#173=CARTESIAN_POINT('',(0.,0.,0.));\n"
+/* FreeCAD has: PRODUCT_RELATED_PRODUCT_CATEGORY('part',$,(#7)); */
+"#50=( GEOMETRIC_REPRESENTATION_CONTEXT(3)\n"
+"GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#55)) GLOBAL_UNIT_ASSIGNED_CONTEXT\n"
+"((#51,#52,#53)) REPRESENTATION_CONTEXT('ID1','3D') );\n"
+"#51=( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );\n"
+"#52=( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );\n"
+"#53=( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );\n"
+"#55=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.001),#51,\n"
+"  'distance_accuracy_value','confusion accuracy');\n"
+
+"#70=AXIS2_PLACEMENT_3D('',#71,#72,#73);\n"
+"#71=CARTESIAN_POINT('',(0.,0.,0.));\n"
+"#72=DIRECTION('',(0.,0.,1.));\n"
+"#73=DIRECTION('',(1.,0.,0.));\n"
+/* shape representation is suspect based on FreeCAD output */
+/* they include links to SHELL_BASED_SURFACE_MODEL items in () list */
+"#169=SHAPE_REPRESENTATION('',(#70),#50);\n"
 "\n"
     );
 
@@ -289,8 +279,6 @@ void StepFileWriter::WriteFooter() {
         );
 }
 
-//        fprintf(f, "#%d=MECHANICAL_DESIGN_GEOMETRIC_PRESENTATION_REPRESENTATION('',(#%d),#168);\n", id, id + 1);
-//        id++;
 //        fprintf(f, "#%d=COLOUR_RGB('',%f,%f,%f);\n", id, ss->color.redF(), ss->color.greenF(), ss->color.blueF());
 //        id++;
 
@@ -366,7 +354,7 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
     }
     fprintf(f, "));\n");
     fprintf(f, "#%d=MANIFOLD_SOLID_BREP('brep',#%d);\n", id+1, id);
-    fprintf(f, "#%d=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#%d,#170),#168);\n",
+    fprintf(f, "#%d=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#%d,#70),#50);\n",
         id+2, id+1);
     fprintf(f, "#%d=SHAPE_REPRESENTATION_RELATIONSHIP($,$,#169,#%d);\n",
         id+3, id+2);
@@ -403,7 +391,7 @@ void StepFileWriter::WriteWireframe() {
     }
     fprintf(f, "));\n");
     fprintf(f, "#%d=GEOMETRICALLY_BOUNDED_WIREFRAME_SHAPE_REPRESENTATION"
-                    "('',(#%d,#170),#168);\n", id+1, id);
+                    "('',(#%d,#70),#50);\n", id+1, id);
     fprintf(f, "#%d=SHAPE_REPRESENTATION_RELATIONSHIP($,$,#169,#%d);\n",
         id+2, id+1);
 
