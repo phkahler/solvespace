@@ -44,7 +44,7 @@ void StepFileWriter::WriteHeader() {
 "#73=DIRECTION('',(1.,0.,0.));\n"
 /* shape representation is suspect based on FreeCAD output */
 /* they include links to SHELL_BASED_SURFACE_MODEL items in () list */
-"#169=SHAPE_REPRESENTATION('',(#70),#50);\n"
+//"#169=SHAPE_REPRESENTATION('',(#70),#50);\n"
 "\n"
     );
 
@@ -72,6 +72,7 @@ int StepFileWriter::ExportCurve(SBezier *sb) {
     fprintf(f, "#%d=(\n", ret);
     fprintf(f, "BOUNDED_CURVE()\n");
     fprintf(f, "B_SPLINE_CURVE(%d,(", sb->deg);
+    // Write the IDs of the cartesian points
     for(i = 0; i <= sb->deg; i++) {
         fprintf(f, "#%d", ret + i + 1);
         if(i != sb->deg) fprintf(f, ",");
@@ -257,14 +258,17 @@ void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl) {
             if(listOfLoops.NextAfter(fb) != NULL) fprintf(f, ",");
         }
 
-        id++;
-
         listOfLoops.Clear();
         fprintf(f, "),#%d,.T.);\n", srfid);
-        fprintf(f, "\n");
         advancedFaces.Add(&advFaceId);
 
+        id++;
+        fprintf(f, "#%d=OPEN_SHELL('',(#%d));\n", id, id-1);
+        id++;
+        fprintf(f, "#%d=SHELL_BASED_SURFACE_MODEL('',(#%d));\n", id, id-1);
+        id++;
         fprintf(f, "\n");
+
     }
     sblss.Clear();
     spxyz.Clear();
@@ -297,7 +301,7 @@ void StepFileWriter::ExportStyleRGB(int advancedFaceId) {
         id++;
         fprintf(f, "#%d=FILL_AREA_STYLE_COLOUR('',(#%d));\n", id, id + 1);
         id++;
-        fprintf(f, "#%d=DRAUGHTING_PRE_DEFINED_COLOUR('cyan');\n", id);
+        fprintf(f, "#%d=COLOUR_RGB('',0.3,0.66,1.);\n", id);
         id++;
 }
 
@@ -345,9 +349,9 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
 
         sbl.Clear();
     }
-
-    fprintf(f, "#%d=CLOSED_SHELL('',(", id);
     int *af;
+/*
+    fprintf(f, "#%d=CLOSED_SHELL('',(", id);
     for(af = advancedFaces.First(); af; af = advancedFaces.NextAfter(af)) {
         fprintf(f, "#%d", *af);
         if(advancedFaces.NextAfter(af) != NULL) fprintf(f, ",");
@@ -359,7 +363,7 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
     fprintf(f, "#%d=SHAPE_REPRESENTATION_RELATIONSHIP($,$,#169,#%d);\n",
         id+3, id+2);
     id+=4;
-
+*/
     fprintf(f,"\n");
 
     // Write a style with color for each face
@@ -374,7 +378,16 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
         fprintf(f, "#%d", *af);
         if(styleIds.NextAfter(af) != NULL) fprintf(f, ",");
     }
-    fprintf(f, "),168);\n");
+    fprintf(f, "),50);\n");
+
+    fprintf(f, "#%d=SHAPE_REPRESENTATION('',(70,", id);
+    id++;
+    for(af = styleIds.First(); af; af = styleIds.NextAfter(af)) {
+        fprintf(f, "#%d", *af+2);
+        if(styleIds.NextAfter(af) != NULL) fprintf(f, ",");
+    }
+    fprintf(f, "),50);\n");
+
 
     WriteFooter();
     fclose(f);
