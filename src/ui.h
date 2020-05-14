@@ -133,6 +133,7 @@ enum class Command : uint32_t {
     GROUP_REVOLVE,
     GROUP_ROT,
     GROUP_TRANS,
+    GROUP_COPY,
     GROUP_LINK,
     GROUP_RECENT,
     // Constrain

@@ -209,8 +209,29 @@ void Group::GenerateShellAndMesh() {
             haveSrc = false;
         }
     }
+    
+    if(type == Type::COPY) {
+        // The copied shell or mesh are copied over, with the appropriate
+        // transformation applied. We also must remap the face entities.
+        Vector offset = {
+            SK.GetParam(h.param(0))->val,
+            SK.GetParam(h.param(1))->val,
+            SK.GetParam(h.param(2))->val };
+        Quaternion q = {
+            SK.GetParam(h.param(3))->val,
+            SK.GetParam(h.param(4))->val,
+            SK.GetParam(h.param(5))->val,
+            SK.GetParam(h.param(6))->val };
 
-    if(type == Type::TRANSLATE || type == Type::ROTATE) {
+        Group *srcg = SK.GetGroup(opA);
+
+        thisMesh.MakeFromTransformationOf(&srcg->thisMesh, offset, q, 1.0);
+        thisMesh.RemapFaces(this, 0);
+
+        thisShell.MakeFromTransformationOf(&srcg->thisShell, offset, q, 1.0);
+        thisShell.RemapFaces(this, 0);
+
+    } else if(type == Type::TRANSLATE || type == Type::ROTATE) {
         // A step and repeat gets merged against the group's previous group,
         // not our own previous group.
         srcg = SK.GetGroup(opA);
@@ -371,7 +392,6 @@ void Group::GenerateShellAndMesh() {
         thisShell.MakeFromTransformationOf(&impShell, offset, q, scale);
         thisShell.RemapFaces(this, 0);
     }
-
     if(srcg->meshCombine != CombineAs::ASSEMBLE) {
         thisShell.MergeCoincidentSurfaces();
     }
