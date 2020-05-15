@@ -225,10 +225,10 @@ void Group::GenerateShellAndMesh() {
 
         Group *srcg = SK.GetGroup(opA);
 
-        thisMesh.MakeFromTransformationOf(&srcg->thisMesh, offset, q, 1.0);
+        thisMesh.MakeFromTransformationOf(&srcg->thisMesh, offset, q, scale);
         thisMesh.RemapFaces(this, 0);
 
-        thisShell.MakeFromTransformationOf(&srcg->thisShell, offset, q, 1.0);
+        thisShell.MakeFromTransformationOf(&srcg->thisShell, offset, q, scale);
         thisShell.RemapFaces(this, 0);
 
     } else if(type == Type::TRANSLATE || type == Type::ROTATE) {
