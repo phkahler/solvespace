@@ -163,6 +163,7 @@ public:
         HELIX                         = 5103,
         ROTATE                        = 5200,
         TRANSLATE                     = 5201,
+        COPY                          = 5202,
         LINKED                        = 5300
     };
     Group::Type type;

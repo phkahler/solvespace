@@ -149,6 +149,20 @@ void Group::MenuGroup(Command id, Platform::Path linkFile) {
             }
             break;
 
+        case Command::GROUP_COPY:
+            if(SS.GW.LockedInWorkplane()) {
+//                Error(_("Group Copy is for 3D objects"));
+//                return;
+            }
+            g.valA = 1;
+            g.type = Type::COPY;
+            g.opA = SS.GW.activeGroup;
+            g.predef.entityB = SS.GW.ActiveWorkplane();
+            g.subtype = Subtype::ONE_SIDED;
+            g.name = C_("group-name", "copy");
+            g.scale = -1.0;
+            break;
+
         case Command::GROUP_EXTRUDE:
             if(!SS.GW.LockedInWorkplane()) {
                 Error(_("Activate a workplane (Sketch -> In Workplane) before "
@@ -405,7 +419,8 @@ std::string Group::DescriptionString() {
 
 void Group::Activate() {
     if(type == Type::EXTRUDE || type == Type::LINKED || type == Type::LATHE ||
-       type == Type::REVOLVE || type == Type::HELIX || type == Type::TRANSLATE || type == Type::ROTATE) {
+       type == Type::REVOLVE || type == Type::HELIX || type == Type::TRANSLATE ||
+       type == Type::ROTATE || type == Type::COPY) {
         SS.GW.showFaces = true;
     } else {
         SS.GW.showFaces = false;
@@ -471,6 +486,45 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             return;
         }
 
+        case Type::COPY: {
+            // inherit meshCombine from source group
+            Group *srcg = SK.GetGroup(opA);
+            meshCombine = srcg->meshCombine;
+            // The translation vector
+            AddParam(param, h.param(0), gp.x);
+            AddParam(param, h.param(1), gp.y);
+            AddParam(param, h.param(2), gp.z);
+            // The rotation quaternion
+            AddParam(param, h.param(3), 0);
+            AddParam(param, h.param(4), 0);
+            AddParam(param, h.param(5), 0);
+            AddParam(param, h.param(6), 1);
+            // The mirror plane distance
+            AddParam(param, h.param(7), 1);
+
+            // Not using range-for here because we're changing the size of entity in the loop.
+            for(i = 0; i < entity->n; i++) {
+                Entity *e = &(entity->Get(i));
+                if(e->group != opA) continue;
+
+                e->CalculateNumerical(/*forExport=*/false);
+                hEntity he = e->h;
+/*
+                CopyEntity(entity, SK.GetEntity(he), 0, 0,
+                    h.param(0), h.param(1), h.param(2),
+                    h.param(3), h.param(4), h.param(5), h.param(6), NO_PARAM,
+                    CopyAs::NUMERIC);
+                // As soon as I call CopyEntity, e may become invalid! That
+                // adds entities, which may cause a realloc.
+                e = &(entity->Get(i));
+*/
+                CopyEntity(entity, SK.GetEntity(he), 0, 1,
+                    h.param(0), h.param(1), h.param(2),
+                    h.param(3), h.param(4), h.param(5), h.param(6), NO_PARAM,
+                    CopyAs::N_ROT_TRANS);
+            }
+            return;
+        }
         case Type::EXTRUDE: {
             AddParam(param, h.param(0), gn.x);
             AddParam(param, h.param(1), gn.y);
@@ -776,7 +830,23 @@ void Group::AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index) {
 }
 
 void Group::GenerateEquations(IdList<Equation,hEquation> *l) {
-    if(type == Type::LINKED) {
+    if(type == Type::COPY) {
+        ExprVector translate = ExprVector::From(
+            Expr::From(h.param(0)),
+            Expr::From(h.param(1)),
+            Expr::From(h.param(2)) );
+        ExprVector axis = ExprVector::From(
+            Expr::From(h.param(4)),
+            Expr::From(h.param(5)),
+            Expr::From(h.param(6)) );
+        AddEq(l, Expr::From(h.param(3)),0);  // rotation is 180 degrees: w=0
+        AddEq(l, axis.Dot(axis)->Minus(Expr::From(1.0)),1); // the rest is unit length
+    // the translation must be along the rotation axis / mirror normal
+        Expr *len = Expr::From(h.param(7))->Times(Expr::From(2.0));
+        AddEq(l, (axis.x)->Times(len)->Minus(translate.x),2); // translate = axis*d*2
+        AddEq(l, (axis.y)->Times(len)->Minus(translate.y),3); // translate = axis*d*2
+        AddEq(l, (axis.z)->Times(len)->Minus(translate.z),4); // translate = axis*d*2
+    } else if(type == Type::LINKED ) {
         // Normalize the quaternion
         ExprQuaternion q = {
             Expr::From(h.param(3)),
@@ -784,6 +854,7 @@ void Group::GenerateEquations(IdList<Equation,hEquation> *l) {
             Expr::From(h.param(5)),
             Expr::From(h.param(6)) };
         AddEq(l, (q.Magnitude())->Minus(Expr::From(1)), 0);
+
     } else if(type == Type::ROTATE || type == Type::REVOLVE || type == Type::HELIX) {
         // The axis and center of rotation are specified numerically
 #define EC(x) (Expr::From(x))
