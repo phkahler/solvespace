@@ -24,7 +24,8 @@ enum class EarType : uint32_t {
 enum class BspClass : uint32_t {
     POS         = 100,
     NEG         = 101,
-    COPLANAR    = 200
+    COPLANAR    = 200,
+    NOOP        = 300
 };
 
 enum class EdgeKind : uint32_t {
@@ -238,9 +239,10 @@ public:
     void Insert(STriangle *str, SMesh *instead);
     static SBsp3 *InsertOrCreate(SBsp3 *where, STriangle *str, SMesh *instead);
 
-    void InsertConvexHow(BspClass how, STriMeta meta, Vector *vertex, size_t n,
-                                SMesh *instead);
-    SBsp3 *InsertConvex(STriMeta meta, Vector *vertex, size_t n, SMesh *instead);
+//    void InsertConvexHow(BspClass how, STriMeta meta, Vector *vertex, size_t n,
+//                                SMesh *instead);
+//    SBsp3 *InsertConvex(STriMeta meta, Vector *vertex, size_t n, SMesh *instead);
+    void InsertConvex(SBsp3 **node, STriMeta meta, Vector *vec, size_t nc, SMesh *instead);
 
     void InsertInPlane(bool pos2, STriangle *tr, SMesh *m);
 
