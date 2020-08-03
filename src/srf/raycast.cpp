@@ -18,47 +18,14 @@ extern int FLAG;
 
 double SSurface::DepartureFromCoplanar() const {
     int i, j;
-    int ia, ja, ib = 0, jb = 0, ic = 0, jc = 0;
-    double best;
 
-    // Grab three points to define a plane; first choose (0, 0) arbitrarily.
-    ia = ja = 0;
-    // Then the point farthest from pt a.
-    best = VERY_NEGATIVE;
-    for(i = 0; i <= degm; i++) {
-        for(j = 0; j <= degn; j++) {
-            if(i == ia && j == ja) continue;
+    // use a plane tangent to the surface at 0.5, 0.5 but through crtl[0][0]
+    Vector tu, tv;
+    TangentsAt(0.5, 0.5, &tu,&tv);
 
-            double dist = (ctrl[i][j]).Minus(ctrl[ia][ja]).Magnitude();
-            if(dist > best) {
-                best = dist;
-                ib = i;
-                jb = j;
-            }
-        }
-    }
-    // Then biggest magnitude of ab cross ac.
-    best = VERY_NEGATIVE;
-    for(i = 0; i <= degm; i++) {
-        for(j = 0; j <= degn; j++) {
-            if(i == ia && j == ja) continue;
-            if(i == ib && j == jb) continue;
-
-            double mag =
-                ((ctrl[ia][ja].Minus(ctrl[ib][jb]))).Cross(
-                 (ctrl[ia][ja].Minus(ctrl[i ][j ]))).Magnitude();
-            if(mag > best) {
-                best = mag;
-                ic = i;
-                jc = j;
-            }
-        }
-    }
-
-    Vector n = ((ctrl[ia][ja].Minus(ctrl[ib][jb]))).Cross(
-                (ctrl[ia][ja].Minus(ctrl[ic][jc])));
+    Vector n = (tu.Cross(tv));
     n = n.WithMagnitude(1);
-    double d = (ctrl[ia][ja]).Dot(n);
+    double d = (ctrl[0][0]).Dot(n);
 
     // Finally, calculate the deviation from each point to the plane.
     double farthest = VERY_NEGATIVE;
