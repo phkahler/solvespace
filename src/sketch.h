@@ -152,6 +152,7 @@ public:
         N_ROT_AA,
         N_ROT_TRANS,
         N_ROT_AXIS_TRANS,
+        SCALE_ROT_TRANS,
     };
 
     enum class Type : uint32_t {
@@ -395,12 +396,14 @@ public:
         POINT_N_COPY           =  2012,
         POINT_N_ROT_AA         =  2013,
         POINT_N_ROT_AXIS_TRANS =  2014,
+        POINT_SRT              =  2015,
 
         NORMAL_IN_3D           =  3000,
         NORMAL_IN_2D           =  3001,
         NORMAL_N_COPY          =  3010,
         NORMAL_N_ROT           =  3011,
         NORMAL_N_ROT_AA        =  3012,
+        NORMAL_SRT             =  3013,
 
         DISTANCE               =  4000,
         DISTANCE_N_COPY        =  4001,
@@ -412,6 +415,7 @@ public:
         FACE_N_ROT_AA          =  5004,
         FACE_ROT_NORMAL_PT     =  5005,
         FACE_N_ROT_AXIS_TRANS  =  5006,
+        FACE_SRT               =  5007,
 
         WORKPLANE              = 10000,
         LINE_SEGMENT           = 11000,

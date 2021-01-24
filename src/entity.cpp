@@ -244,6 +244,7 @@ bool EntityBase::IsPoint() const {
         case Type::POINT_N_COPY:
         case Type::POINT_N_TRANS:
         case Type::POINT_N_ROT_TRANS:
+        case Type::POINT_SRT:
         case Type::POINT_N_ROT_AA:
         case Type::POINT_N_ROT_AXIS_TRANS:
             return true;
@@ -258,6 +259,7 @@ bool EntityBase::IsNormal() const {
         case Type::NORMAL_IN_3D:
         case Type::NORMAL_IN_2D:
         case Type::NORMAL_N_COPY:
+        case Type::NORMAL_SRT:
         case Type::NORMAL_N_ROT:
         case Type::NORMAL_N_ROT_AA:
             return true;
@@ -283,6 +285,7 @@ Quaternion EntityBase::NormalGetNum() const {
             q = numNormal;
             break;
 
+        case Type::NORMAL_SRT:
         case Type::NORMAL_N_ROT:
             q = Quaternion::From(param[0], param[1], param[2], param[3]);
             q = q.Times(numNormal);
@@ -312,6 +315,7 @@ void EntityBase::NormalForceTo(Quaternion q) {
         case Type::NORMAL_N_COPY:
             // There's absolutely nothing to do; these are locked.
             break;
+        case Type::NORMAL_SRT:
         case Type::NORMAL_N_ROT: {
             Quaternion qp = q.Times(numNormal.Inverse());
 
@@ -367,10 +371,16 @@ ExprQuaternion EntityBase::NormalGetExprs() const {
             q = ExprQuaternion::From(numNormal);
             break;
 
+        case Type::NORMAL_SRT: {
+            ExprQuaternion orig = ExprQuaternion::From(numNormal);
+            q = ExprQuaternion::From(param[0], param[1], param[2], param[3]);
+            q = q.Times(orig);
+            break;
+        }
+
         case Type::NORMAL_N_ROT: {
             ExprQuaternion orig = ExprQuaternion::From(numNormal);
             q = ExprQuaternion::From(param[0], param[1], param[2], param[3]);
-
             q = q.Times(orig);
             break;
         }
@@ -429,6 +439,7 @@ void EntityBase::PointForceTo(Vector p) {
             break;
         }
 
+        case Type::POINT_SRT:
         case Type::POINT_N_ROT_TRANS: {
             // Force only the translation; leave the rotation unchanged. But
             // remember that we're working with respect to the rotated
@@ -439,6 +450,11 @@ void EntityBase::PointForceTo(Vector p) {
             SK.GetParam(param[2])->val = trans.z;
             break;
         }
+
+//        case Type::POINT_SRT: {
+//            // The inverse kinematics for this are hard.
+//            break;
+//        }
 
         case Type::POINT_N_ROT_AA: {
             // Force only the angle; the axis and center of rotation stay
@@ -526,6 +542,15 @@ Vector EntityBase::PointGetNum() const {
             break;
         }
 
+        case Type::POINT_SRT: {
+            double scale = SK.GetParam(param[7])->val;
+            Vector offset = Vector::From(param[0], param[1], param[2]);
+            Quaternion q = PointGetQuaternion();
+            p = q.Rotate(numPoint.ScaledBy(scale));
+            p = p.Plus(offset);
+            break;
+        }
+
         case Type::POINT_N_ROT_AA: {
             Vector offset = Vector::From(param[0], param[1], param[2]);
             Quaternion q = PointGetQuaternion();
@@ -583,6 +608,15 @@ ExprVector EntityBase::PointGetExprs() const {
             ExprQuaternion q =
                 ExprQuaternion::From(param[3], param[4], param[5], param[6]);
             orig = q.Rotate(orig);
+            r = orig.Plus(trans);
+            break;
+        }
+        case Type::POINT_SRT: {
+            ExprVector orig = ExprVector::From(numPoint);
+            ExprVector trans = ExprVector::From(param[0], param[1], param[2]);
+            ExprQuaternion q =
+                ExprQuaternion::From(param[3], param[4], param[5], param[6]);
+            orig = q.Rotate(orig.ScaledBy(Expr::From(param[7])));
             r = orig.Plus(trans);
             break;
         }
@@ -687,7 +721,7 @@ Quaternion EntityBase::PointGetQuaternion() const {
 
     if(type == Type::POINT_N_ROT_AA || type == Type::POINT_N_ROT_AXIS_TRANS) {
         q = GetAxisAngleQuaternion(3);
-    } else if(type == Type::POINT_N_ROT_TRANS) {
+    } else if(type == Type::POINT_N_ROT_TRANS || type == Type::POINT_SRT) {
         q = Quaternion::From(param[3], param[4], param[5], param[6]);
     } else ssassert(false, "Unexpected entity type");
 
@@ -699,6 +733,7 @@ bool EntityBase::IsFace() const {
         case Type::FACE_NORMAL_PT:
         case Type::FACE_XPROD:
         case Type::FACE_N_ROT_TRANS:
+        case Type::FACE_SRT:
         case Type::FACE_N_TRANS:
         case Type::FACE_N_ROT_AA:
         case Type::FACE_ROT_NORMAL_PT:
@@ -720,7 +755,7 @@ ExprVector EntityBase::FaceGetNormalExprs() const {
             ExprVector::From(numNormal.vx, numNormal.vy, numNormal.vz);
         r = vc.Cross(vn);
         r = r.WithMagnitude(Expr::From(1.0));
-    } else if(type == Type::FACE_N_ROT_TRANS) {
+    } else if(type == Type::FACE_N_ROT_TRANS || type == Type::FACE_SRT) {
         // The numerical normal vector gets the rotation; the numerical
         // normal has magnitude one, and the rotation doesn't change that,
         // so there's no need to fix it up.
@@ -746,7 +781,7 @@ Vector EntityBase::FaceGetNormalNum() const {
         Vector vc = Vector::From(param[0], param[1], param[2]);
         Vector vn = Vector::From(numNormal.vx, numNormal.vy, numNormal.vz);
         r = vc.Cross(vn);
-    } else if(type == Type::FACE_N_ROT_TRANS) {
+    } else if(type == Type::FACE_N_ROT_TRANS || type == Type::FACE_SRT) {
         // The numerical normal vector gets the rotation
         r = Vector::From(numNormal.vx, numNormal.vy, numNormal.vz);
         Quaternion q = Quaternion::From(param[3], param[4], param[5], param[6]);
@@ -767,12 +802,20 @@ ExprVector EntityBase::FaceGetPointExprs() const {
         r = SK.GetEntity(point[0])->PointGetExprs();
     } else if(type == Type::FACE_XPROD) {
         r = ExprVector::From(numPoint);
-    } else if(type == Type::FACE_N_ROT_TRANS) {
+    } else if(type == Type::FACE_N_ROT_TRANS) {    
         // The numerical point gets the rotation and translation.
         ExprVector trans = ExprVector::From(param[0], param[1], param[2]);
         ExprQuaternion q =
             ExprQuaternion::From(param[3], param[4], param[5], param[6]);
         r = ExprVector::From(numPoint);
+        r = q.Rotate(r);
+        r = r.Plus(trans);
+    } else if(type == Type::FACE_SRT) {    
+        // The numerical point gets the scale, rotation and translation.
+        ExprVector trans = ExprVector::From(param[0], param[1], param[2]);
+        ExprQuaternion q =
+            ExprQuaternion::From(param[3], param[4], param[5], param[6]);
+        r = ExprVector::From(numPoint).ScaledBy(Expr::From(param[7]));
         r = q.Rotate(r);
         r = r.Plus(trans);
     } else if(type == Type::FACE_N_ROT_AXIS_TRANS) {
@@ -810,6 +853,13 @@ Vector EntityBase::FaceGetPointNum() const {
         Vector trans = Vector::From(param[0], param[1], param[2]);
         Quaternion q = Quaternion::From(param[3], param[4], param[5], param[6]);
         r = q.Rotate(numPoint);
+        r = r.Plus(trans);
+    } else if(type == Type::FACE_SRT) {
+        // The numerical point gets the rotation and translation.
+        Vector trans = Vector::From(param[0], param[1], param[2]);
+        Quaternion q = Quaternion::From(param[3], param[4], param[5], param[6]);
+        double scale = SK.GetParam(param[7])->val;
+        r = q.Rotate(numPoint.ScaledBy(scale));
         r = r.Plus(trans);
     } else if(type == Type::FACE_N_ROT_AXIS_TRANS) {
             Vector offset = Vector::From(param[0], param[1], param[2]);

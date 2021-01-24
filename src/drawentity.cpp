@@ -84,6 +84,7 @@ void Entity::GetReferencePoints(std::vector<Vector> *refs) {
         case Type::POINT_N_COPY:
         case Type::POINT_N_TRANS:
         case Type::POINT_N_ROT_TRANS:
+        case Type::POINT_SRT:
         case Type::POINT_N_ROT_AA:
         case Type::POINT_N_ROT_AXIS_TRANS:
         case Type::POINT_IN_3D:
@@ -93,6 +94,7 @@ void Entity::GetReferencePoints(std::vector<Vector> *refs) {
 
         case Type::NORMAL_N_COPY:
         case Type::NORMAL_N_ROT:
+        case Type::NORMAL_SRT:
         case Type::NORMAL_N_ROT_AA:
         case Type::NORMAL_IN_3D:
         case Type::NORMAL_IN_2D:
@@ -119,6 +121,7 @@ void Entity::GetReferencePoints(std::vector<Vector> *refs) {
         case Type::FACE_XPROD:
         case Type::FACE_N_ROT_TRANS:
         case Type::FACE_N_TRANS:
+        case Type::FACE_SRT:
         case Type::FACE_N_ROT_AA:
         case Type::FACE_ROT_NORMAL_PT:
         case Type::FACE_N_ROT_AXIS_TRANS:
@@ -526,6 +529,7 @@ void Entity::Draw(DrawAs how, Canvas *canvas) {
         case Type::POINT_N_COPY:
         case Type::POINT_N_TRANS:
         case Type::POINT_N_ROT_TRANS:
+        case Type::POINT_SRT:
         case Type::POINT_N_ROT_AA:
         case Type::POINT_N_ROT_AXIS_TRANS:
         case Type::POINT_IN_3D:
@@ -572,6 +576,7 @@ void Entity::Draw(DrawAs how, Canvas *canvas) {
 
         case Type::NORMAL_N_COPY:
         case Type::NORMAL_N_ROT:
+        case Type::NORMAL_SRT:
         case Type::NORMAL_N_ROT_AA:
         case Type::NORMAL_IN_3D:
         case Type::NORMAL_IN_2D: {
@@ -780,6 +785,7 @@ void Entity::Draw(DrawAs how, Canvas *canvas) {
         case Type::FACE_NORMAL_PT:
         case Type::FACE_XPROD:
         case Type::FACE_N_ROT_TRANS:
+        case Type::FACE_SRT:
         case Type::FACE_N_TRANS:
         case Type::FACE_N_ROT_AA:
         case Type::FACE_ROT_NORMAL_PT:

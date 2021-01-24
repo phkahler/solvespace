@@ -1044,6 +1044,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
         case Entity::Type::POINT_N_COPY:
         case Entity::Type::POINT_N_TRANS:
         case Entity::Type::POINT_N_ROT_TRANS:
+        case Entity::Type::POINT_SRT:
         case Entity::Type::POINT_N_ROT_AA:
         case Entity::Type::POINT_N_ROT_AXIS_TRANS:
         case Entity::Type::POINT_IN_3D:
@@ -1060,6 +1061,8 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
                     en.type = Entity::Type::POINT_N_ROT_AA;
                 } else if (as == CopyAs::N_ROT_AXIS_TRANS) {
                     en.type = Entity::Type::POINT_N_ROT_AXIS_TRANS;
+                } else if (as == CopyAs::SCALE_ROT_TRANS) {
+                    en.type = Entity::Type::POINT_SRT;
                 } else {
                     en.type = Entity::Type::POINT_N_ROT_TRANS;
                 }
@@ -1070,15 +1073,17 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
                 en.param[4] = qvx;
                 en.param[5] = qvy;
                 en.param[6] = qvz;
-                if (as ==  CopyAs::N_ROT_AXIS_TRANS) {
+                if (as == CopyAs::N_ROT_AXIS_TRANS || as == CopyAs::SCALE_ROT_TRANS) {
                     en.param[7] = dist;
                 }
             }
+            // SRT points will also scale by parameter 7
             en.numPoint = (ep->actPoint).ScaledBy(scale);
             break;
 
         case Entity::Type::NORMAL_N_COPY:
         case Entity::Type::NORMAL_N_ROT:
+        case Entity::Type::NORMAL_SRT:
         case Entity::Type::NORMAL_N_ROT_AA:
         case Entity::Type::NORMAL_IN_3D:
         case Entity::Type::NORMAL_IN_2D:
@@ -1087,6 +1092,8 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
             } else {  // N_ROT_AXIS_TRANS probably doesn't warrant a new entity Type
                 if(as == CopyAs::N_ROT_AA || as == CopyAs::N_ROT_AXIS_TRANS) {
                     en.type = Entity::Type::NORMAL_N_ROT_AA;
+                } else if(as == CopyAs::SCALE_ROT_TRANS) {
+                    en.type = Entity::Type::NORMAL_SRT;
                 } else {
                     en.type = Entity::Type::NORMAL_N_ROT;
                 }
@@ -1111,6 +1118,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
         case Entity::Type::FACE_XPROD:
         case Entity::Type::FACE_N_ROT_TRANS:
         case Entity::Type::FACE_N_TRANS:
+        case Entity::Type::FACE_SRT:
         case Entity::Type::FACE_N_ROT_AA:
         case Entity::Type::FACE_ROT_NORMAL_PT:
         case Entity::Type::FACE_N_ROT_AXIS_TRANS:
@@ -1121,7 +1129,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
                 en.param[2] = dz;
             } else if (as == CopyAs::NUMERIC) {
                 en.type = Entity::Type::FACE_NORMAL_PT;
-            } else if (as == CopyAs::N_ROT_AXIS_TRANS) {
+            } else if (as == CopyAs::N_ROT_AXIS_TRANS || as == CopyAs::SCALE_ROT_TRANS) {
                 en.type = Entity::Type::FACE_N_ROT_AXIS_TRANS;
                 en.param[0] = dx;
                 en.param[1] = dy;
