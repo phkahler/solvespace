@@ -164,6 +164,7 @@ public:
         HELIX                         = 5103,
         ROTATE                        = 5200,
         TRANSLATE                     = 5201,
+        MIRROR                        = 5202,
         LINKED                        = 5300
     };
     Group::Type type;
