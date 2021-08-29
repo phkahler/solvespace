@@ -50,6 +50,7 @@ static void FindVertsOnCurve(List<SInter> *l, const SCurve *curve, SShell *sh) {
             continue;
         }
         
+        // we could do end points for non-exact curves by using the PWL end points
         for(int i=0; i<2; i++) {
             Vector pt = sc.exact.ctrl[ i==0 ? 0 : sc.exact.deg ];
             double t;
@@ -60,6 +61,13 @@ static void FindVertsOnCurve(List<SInter> *l, const SCurve *curve, SShell *sh) {
                 inter.p = pt;
                 l->Add(&inter);
             }
+        }
+        // a simple experiment in finding *some* curve-curve intersections
+        Vector p = curve->exact.PointAt(0.5).Plus(sc.exact.PointAt(0.5)).ScaledBy(0.5);
+        if(curve->exact.PointOnThisAndCurve(&sc.exact, &p)) {
+            SInter inter;
+            inter.p = p;
+            l->Add(&inter);
         }
     }
 }
