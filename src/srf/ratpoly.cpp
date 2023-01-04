@@ -36,15 +36,58 @@ static inline double BernsteinDerivative(int k, int deg, double t) {
     return ((c[2]*t)+c[1])*t+c[0];
 }
 
+static inline void Bernstein_4(int deg, double t, double results[])
+{
+    // indexed by [degree][3-exponent][k]
+    static const double bernstein_4_coeff[4][4][4] = {
+    { { 0.0,0.0,0.0,0.0 },  { 0.0,0.0,0.0,0.0 }, { 0.0,0.0,0.0,0.0 }, { 1.0,1.0,1.0,1.0 } },
+    { { 0.0,0.0,0.0,0.0 },  { 0.0,0.0,0.0,0.0 }, { -1.0,1.0,0.0,0.0}, { 1.0,0.0,0.0,0.0 } },
+    { { 0.0,0.0,0.0,0.0 },  { 1.0,-2.0,1.0,0.0 },{-2.0,2.0,0.0,0.0 }, { 1.0,0.0,0.0,0.0 } },
+    { { -1.0,3.0,-3.0,1.0 },{ 3.0,-6.0,3.0,0.0 },{ -3.0,3.0,0.0,0.0}, { 1.0,0.0,0.0,0.0 } } };
+
+    int i;
+
+    // evaluate all 4 polynomials of degree(deg) at t. Can be done in parallel with AVX
+    for (i=0; i<4; i++)
+        results[i] = bernstein_4_coeff[deg][0][i];
+    for (i=0; i<4; i++)
+        results[i] = results[i] * t + bernstein_4_coeff[deg][1][i];
+    for (i=0; i<4; i++)
+        results[i] = results[i] * t + bernstein_4_coeff[deg][2][i];
+    for (i=0; i<4; i++)
+        results[i] = results[i] * t + bernstein_4_coeff[deg][3][i];
+}
+
+static inline void BernsteinDerivative_4(int deg, double t, double results[])
+{
+    static const double bernstein_derivative_4_coeff[4][3][4] = {
+    { { 0.0,0.0,0.0,0.0 }, { 0.0,0.0,0.0,0.0 },  { 0.0,0.0,0.0,0.0 } },
+    { { 0.0,0.0,0.0,0.0 }, { 0.0,0.0,0.0,0.0 },  {-1.0,1.0,0.0,0.0 } },
+    { { 0.0,0.0,0.0,0.0 }, { 2.0,-4.0,2.0,0.0 }, {-2.0,2.0,0.0,0.0 } },
+    { {-3.0,9.0,-9.0,3.0}, { 6.0,-12.0,6.0,0.0 },{-3.0,3.0,0.0,0.0 } } };
+
+    int i;
+
+    // evaluate all 4 polynomials of degree(deg) at t. Can be done in parallel with AVX
+    for (i=0; i<4; i++)
+        results[i] = bernstein_derivative_4_coeff[deg][0][i];
+    for (i=0; i<4; i++)
+        results[i] = results[i] * t + bernstein_derivative_4_coeff[deg][1][i];
+    for (i=0; i<4; i++)
+        results[i] = results[i] * t + bernstein_derivative_4_coeff[deg][2][i];
+}
+
 Vector SBezier::PointAt(double t) const {
     Vector pt = Vector::From(0, 0, 0);
     double d = 0;
+    double B[4];
+
+    Bernstein_4(deg, t, B);
 
     int i;
     for(i = 0; i <= deg; i++) {
-        double B = Bernstein(i, deg, t);
-        pt = pt.Plus(ctrl[i].ScaledBy(B*weight[i]));
-        d += weight[i]*B;
+        pt = pt.Plus(ctrl[i].ScaledBy(B[i]*weight[i]));
+        d += weight[i]*B[i];
     }
     pt = pt.ScaledBy(1.0/d);
     return pt;
@@ -53,18 +96,19 @@ Vector SBezier::PointAt(double t) const {
 Vector SBezier::TangentAt(double t) const {
     Vector pt = Vector::From(0, 0, 0), pt_p = Vector::From(0, 0, 0);
     double d = 0, d_p = 0;
+    double B[4];
+    double Bp[4];
+
+    Bernstein_4(deg, t, B);
+    BernsteinDerivative_4(deg, t, Bp);
 
     int i;
     for(i = 0; i <= deg; i++) {
-        double B  = Bernstein(i, deg, t),
-               Bp = BernsteinDerivative(i, deg, t);
-
-        pt = pt.Plus(ctrl[i].ScaledBy(B*weight[i]));
-        d += weight[i]*B;
-
-        pt_p = pt_p.Plus(ctrl[i].ScaledBy(Bp*weight[i]));
-        d_p += weight[i]*Bp;
-    }
+        pt = pt.Plus(ctrl[i].ScaledBy(B[i]*weight[i]));
+        d += weight[i]*B[i];
+        pt_p = pt_p.Plus(ctrl[i].ScaledBy(Bp[i]*weight[i]));
+        d_p += weight[i]*Bp[i];
+     }
 
     // quotient rule; f(t) = n(t)/d(t), so f' = (n'*d - n*d')/(d^2)
     Vector ret;
@@ -313,15 +357,17 @@ Vector SSurface::PointAt(Point2d puv) const {
 Vector SSurface::PointAt(double u, double v) const {
     Vector num = Vector::From(0, 0, 0);
     double den = 0;
+    double Bi[4];
+    double Bj[4];
+
+    Bernstein_4(degm, u, Bi);
+    Bernstein_4(degn, v, Bj);
 
     int i, j;
     for(i = 0; i <= degm; i++) {
         for(j = 0; j <= degn; j++) {
-            double Bi = Bernstein(i, degm, u),
-                   Bj = Bernstein(j, degn, v);
-
-            num = num.Plus(ctrl[i][j].ScaledBy(Bi*Bj*weight[i][j]));
-            den += weight[i][j]*Bi*Bj;
+            num = num.Plus(ctrl[i][j].ScaledBy(Bi[i]*Bj[j]*weight[i][j]));
+            den += weight[i][j]*Bi[i]*Bj[j];         
         }
     }
     num = num.ScaledBy(1.0/den);
@@ -336,22 +382,26 @@ void SSurface::TangentsAt(double u, double v, Vector *tu, Vector *tv, bool retry
            den_u = 0,
            den_v = 0;
 
+    double Bi[4];
+    double Bip[4];
+    double Bj[4];
+    double Bjp[4];
+    Bernstein_4(degm, u, Bi);
+    BernsteinDerivative_4(degm, u, Bip);
+    Bernstein_4(degn, v, Bj);
+    BernsteinDerivative_4(degn, v, Bjp);
+
     int i, j;
     for(i = 0; i <= degm; i++) {
         for(j = 0; j <= degn; j++) {
-            double Bi  = Bernstein(i, degm, u),
-                   Bj  = Bernstein(j, degn, v),
-                   Bip = BernsteinDerivative(i, degm, u),
-                   Bjp = BernsteinDerivative(j, degn, v);
+            num = num.Plus(ctrl[i][j].ScaledBy(Bi[i]*Bj[j]*weight[i][j]));
+            den += weight[i][j]*Bi[i]*Bj[j];
 
-            num = num.Plus(ctrl[i][j].ScaledBy(Bi*Bj*weight[i][j]));
-            den += weight[i][j]*Bi*Bj;
+            num_u = num_u.Plus(ctrl[i][j].ScaledBy(Bip[i]*Bj[j]*weight[i][j]));
+            den_u += weight[i][j]*Bip[i]*Bj[j];
 
-            num_u = num_u.Plus(ctrl[i][j].ScaledBy(Bip*Bj*weight[i][j]));
-            den_u += weight[i][j]*Bip*Bj;
-
-            num_v = num_v.Plus(ctrl[i][j].ScaledBy(Bi*Bjp*weight[i][j]));
-            den_v += weight[i][j]*Bi*Bjp;
+            num_v = num_v.Plus(ctrl[i][j].ScaledBy(Bi[i]*Bjp[j]*weight[i][j]));
+            den_v += weight[i][j]*Bi[i]*Bjp[j];
         }
     }
     // quotient rule; f(t) = n(t)/d(t), so f' = (n'*d - n*d')/(d^2)
