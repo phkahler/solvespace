@@ -29,6 +29,7 @@ static const EntReqMapping EntReqMap[] = {
 { Request::Type::CUBIC_PERIODIC,  Entity::Type::CUBIC_PERIODIC, 3,  true,   false,  false },
 { Request::Type::CIRCLE,          Entity::Type::CIRCLE,         1,  false,  true,   true  },
 { Request::Type::ARC_OF_CIRCLE,   Entity::Type::ARC_OF_CIRCLE,  3,  false,  true,   false },
+{ Request::Type::HOLE,            Entity::Type::HOLE,           1,  false,  true,   true  },
 { Request::Type::TTF_TEXT,        Entity::Type::TTF_TEXT,       4,  false,  true,   false },
 { Request::Type::IMAGE,           Entity::Type::IMAGE,          4,  false,  true,   false },
 };
@@ -218,6 +219,7 @@ std::string Request::DescriptionString() const {
             case Type::CUBIC_PERIODIC:  s = "periodic-cubic"; break;
             case Type::CIRCLE:          s = "circle";         break;
             case Type::ARC_OF_CIRCLE:   s = "arc-of-circle";  break;
+            case Type::HOLE:            s = "hole";           break;
             case Type::TTF_TEXT:        s = "ttf-text";       break;
             case Type::IMAGE:           s = "image";          break;
         }

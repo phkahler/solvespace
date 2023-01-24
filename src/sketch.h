@@ -357,6 +357,7 @@ public:
         CUBIC_PERIODIC         = 301,
         CIRCLE                 = 400,
         ARC_OF_CIRCLE          = 500,
+        HOLE                   = 550,
         TTF_TEXT               = 600,
         IMAGE                  = 700
     };
@@ -426,6 +427,7 @@ public:
         CUBIC_PERIODIC         = 12001,
         CIRCLE                 = 13000,
         ARC_OF_CIRCLE          = 14000,
+        HOLE                   = 14500,
         TTF_TEXT               = 15000,
         IMAGE                  = 16000
     };

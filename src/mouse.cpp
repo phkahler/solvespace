@@ -1048,6 +1048,26 @@ void GraphicsWindow::MouseLeftDown(double mx, double my, bool shiftDown, bool ct
                     pending.description = _("click to set radius");
                     break;
 
+                case Command::HOLE:
+                    hr = AddRequest(Request::Type::HOLE);
+                    // Centered where we clicked
+                    SK.GetEntity(hr.entity(1))->PointForceTo(v);
+                    // Normal to the screen
+                    SK.GetEntity(hr.entity(32))->NormalForceTo(
+                        Quaternion::From(SS.GW.projRight, SS.GW.projUp));
+                    // Initial radius six
+                    SK.GetEntity(hr.entity(64))->DistanceForceTo(6);
+
+                    ConstrainPointByHovered(hr.entity(1), &mouse);
+
+                    ClearSuper();
+//                    AddToPending(hr);
+
+//                    pending.operation = Pending::DRAGGING_NEW_RADIUS;
+//                    pending.circle = hr.entity(0);
+//                    pending.description = _("click to set radius");
+                    break;
+
                 case Command::ARC: {
                     if(!SS.GW.LockedInWorkplane()) {
                         Error(_("Can't draw arc in 3d; first, activate a workplane "

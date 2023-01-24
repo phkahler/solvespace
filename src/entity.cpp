@@ -121,11 +121,11 @@ Vector EntityBase::VectorGetStartPoint() const {
 }
 
 bool EntityBase::IsCircle() const {
-    return (type == Type::CIRCLE) || (type == Type::ARC_OF_CIRCLE);
+    return (type == Type::CIRCLE) || (type == Type::ARC_OF_CIRCLE) || (type == Type::HOLE);
 }
 
 Expr *EntityBase::CircleGetRadiusExpr() const {
-    if(type == Type::CIRCLE) {
+    if(type == Type::CIRCLE || type == Type::HOLE) {
         return SK.GetEntity(distance)->DistanceGetExpr();
     } else if(type == Type::ARC_OF_CIRCLE) {
         return Constraint::Distance(workplane, point[0], point[1]);
@@ -133,7 +133,7 @@ Expr *EntityBase::CircleGetRadiusExpr() const {
 }
 
 double EntityBase::CircleGetRadiusNum() const {
-    if(type == Type::CIRCLE) {
+    if(type == Type::CIRCLE || type == Type::HOLE) {
         return SK.GetEntity(distance)->DistanceGetNum();
     } else if(type == Type::ARC_OF_CIRCLE) {
         Vector c  = SK.GetEntity(point[0])->PointGetNum();

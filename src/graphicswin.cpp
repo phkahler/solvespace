@@ -133,6 +133,7 @@ const MenuEntry Menu[] = {
 { 1, N_("&Rectangle"),                  Command::RECTANGLE,        'r',     KN, mReq   },
 { 1, N_("&Circle"),                     Command::CIRCLE,           'c',     KN, mReq   },
 { 1, N_("&Arc of a Circle"),            Command::ARC,              'a',     KN, mReq   },
+{ 1, N_("&Hole"),                       Command::HOLE,             'z',     KN, mReq   },
 { 1, N_("&Bezier Cubic Spline"),        Command::CUBIC,            'b',     KN, mReq   },
 { 1, NULL,                              Command::NONE,             0,       KN, NULL   },
 { 1, N_("&Text in TrueType Font"),      Command::TTF_TEXT,         't',     KN, mReq   },
@@ -1360,6 +1361,7 @@ void GraphicsWindow::MenuRequest(Command id) {
             s = _("click first point of construction line segment"); goto c;
         case Command::CUBIC: s = _("click first point of cubic segment"); goto c;
         case Command::CIRCLE: s = _("click center of circle"); goto c;
+        case Command::HOLE: s = _("click center of hole"); goto c;
         case Command::WORKPLANE: s = _("click origin of workplane"); goto c;
         case Command::RECTANGLE: s = _("click one corner of rectangle"); goto c;
         case Command::TTF_TEXT: s = _("click top left of text"); goto c;

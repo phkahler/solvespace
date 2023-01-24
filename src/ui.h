@@ -120,6 +120,7 @@ enum class Command : uint32_t {
     CONSTR_SEGMENT,
     CIRCLE,
     ARC,
+    HOLE,
     RECTANGLE,
     CUBIC,
     TTF_TEXT,

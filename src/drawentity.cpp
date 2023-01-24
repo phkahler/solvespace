@@ -99,6 +99,7 @@ void Entity::GetReferencePoints(std::vector<Vector> *refs) {
         case Type::WORKPLANE:
         case Type::CIRCLE:
         case Type::ARC_OF_CIRCLE:
+        case Type::HOLE:
         case Type::CUBIC:
         case Type::CUBIC_PERIODIC:
         case Type::TTF_TEXT:
@@ -407,7 +408,8 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) const {
             break;
 
         case Type::CIRCLE:
-        case Type::ARC_OF_CIRCLE: {
+        case Type::ARC_OF_CIRCLE:
+        case Type::HOLE: {
             Vector center = SK.GetEntity(point[0])->PointGetNum();
             Quaternion q = SK.GetEntity(normal)->NormalGetNum();
             Vector u = q.RotationU(), v = q.RotationV();
@@ -420,7 +422,7 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) const {
                 break;
             }
 
-            if(type == Type::CIRCLE) {
+            if(type == Type::CIRCLE || type == Type::HOLE) {
                 thetaa = 0;
                 thetab = 2*PI;
                 dtheta = 2*PI;
@@ -464,6 +466,12 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) const {
                 SBezier sb = SBezier::From(p0, p1, p2);
                 sb.weight[1] = cos(dtheta/2);
                 sbl->l.Add(&sb);
+                if (type == Type::HOLE) {
+                    Vector p0 = center.Plus(u.ScaledBy( r*1.2*c)).Plus(v.ScaledBy(r*1.2*s));
+                    Vector p1 = center.Plus(u.ScaledBy( r*0.8*c)).Plus(v.ScaledBy(r*0.8*s));
+                    SBezier sb = SBezier::From(p0,p1);
+                    sbl->l.Add(&sb);                    
+                }
             }
             break;
         }
@@ -750,6 +758,7 @@ void Entity::Draw(DrawAs how, Canvas *canvas) {
         case Type::CIRCLE:
         case Type::ARC_OF_CIRCLE:
         case Type::CUBIC:
+        case Type::HOLE:
         case Type::CUBIC_PERIODIC:
         case Type::TTF_TEXT: {
             // Generate the rational polynomial curves, then piecewise linearize
