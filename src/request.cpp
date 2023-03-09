@@ -200,6 +200,11 @@ void Request::Generate(IdList<Entity,hEntity> *entity,
     }
 
     if(et != (Entity::Type)0) entity->Add(&e);
+    if(type == Type::HOLE) {
+      e.type = Entity::Type::CIRCLE;
+      e.h = h.entity(3);
+      entity->Add(&e);
+    }
 }
 
 std::string Request::DescriptionString() const {
