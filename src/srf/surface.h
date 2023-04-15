@@ -341,6 +341,7 @@ public:
     Vector NormalAt(Point2d puv) const;
     Vector NormalAt(double u, double v) const;
     double CurvatureAt(Point2d puv, double du, double dv) const;
+    double Curvature(Point2d puv, Vector dir) const;
     bool LineEntirelyOutsideBbox(Vector a, Vector b, bool asSegment) const;
     void GetAxisAlignedBounding(Vector *ptMax, Vector *ptMin) const;
     bool CoincidentWithPlane(Vector n, double d) const;

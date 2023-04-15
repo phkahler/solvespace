@@ -382,7 +382,7 @@ Vector SSurface::NormalAt(double u, double v) const {
 double SSurface::CurvatureAt(Point2d puv, double du, double dv) const {
     Vector tu1, tv1, tu2, tv2 , t1, t2;
     TangentsAt(puv.x, puv.y, &tu1, &tv1);
-    t1 = tu1.ScaledBy(du*1000).Plus(tv1.ScaledBy(dv*1000));
+    t1 = tu1.ScaledBy(du*10).Plus(tv1.ScaledBy(dv*10));
     
     TangentsAt(puv.x+du*100, puv.y+dv*100, &tu2,&tv2);
     t2 = tu2.ScaledBy(du*1000).Plus(tv2.ScaledBy(dv*1000));
@@ -390,6 +390,16 @@ double SSurface::CurvatureAt(Point2d puv, double du, double dv) const {
     Vector N = tu1.Cross(tv1);
     double curvature = N.Dot(t2.Minus(t1))/(sqrt(du*du+dv*dv)); //multiply because duv is so small
     return (curvature);    
+}
+
+// Also crude and does not account for non-orthogonal du,dv
+double SSurface::Curvature(Point2d puv, Vector dir) const {
+    Vector tu, tv;
+    double u,v;
+    TangentsAt(puv.x, puv.y, &tu, &tv);
+    u = dir.Dot(tu.WithMagnitude(0.001));
+    v = dir.Dot(tv.WithMagnitude(0.001));
+    return( CurvatureAt(puv, u, v) );
 }
 
 void SSurface::ClosestPointTo(Vector p, Point2d *puv, bool mustConverge) {

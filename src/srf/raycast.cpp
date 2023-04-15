@@ -430,6 +430,7 @@ static const double Random[8] = {1.278, 5.0103, 9.427, -2.331, 7.13, 2.954, 5.03
 // as inside / outside / tangent-to (coincident with) this shell
 // I believe in tangent cases we should look at curvature to see
 // if it ends up inside or outside rather than declared coincident
+// this is called from a surface being trimmed "this" is the other shell
 bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
                           Vector ea, Vector eb,
                           Vector p,
@@ -440,6 +441,8 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
     // First, check for edge-on-edge
     int edge_inters = 0;
     Vector inter_surf_n[2], inter_edge_n[2];
+    double inter_curvature[2];
+    
     for(SSurface &srf : surface) {
         if(srf.LineEntirelyOutsideBbox(ea, eb, /*asSegment=*/true)) continue;
 
@@ -458,10 +461,12 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
                     inter_surf_n[edge_inters] = srf.NormalAt(pm);
                     // A vector normal to the intersecting edge (but within the
                     // intersecting surface) at the intersection point, pointing
-                    // out.
-                    inter_edge_n[edge_inters] =
-                      (inter_surf_n[edge_inters]).Cross((se->b).Minus((se->a)));
+                    // out of the trim polygon.
+                    Vector edge_norm = (inter_surf_n[edge_inters]).Cross((se->b).Minus((se->a)));
+                    inter_edge_n[edge_inters] = edge_norm;
+                      
 // get the curvature here too
+                    inter_curvature[edge_inters] = srf.Curvature(pm, edge_norm);
                 }
 
                 edge_inters++;
