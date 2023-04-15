@@ -390,16 +390,19 @@ void SShell::AllPointsIntersecting(Vector a, Vector b,
 
 
 SShell::Class SShell::ClassifyRegion(Vector edge_n, Vector inter_surf_n,
-                           Vector edge_surf_n) const
+                           Vector edge_surf_n, double curvature) const
 {
+dbp("curvature: %f", curvature);
     double dot = inter_surf_n.DirectionCosineWith(edge_n);
     if(fabs(dot) < DOTP_TOL) {
         // The edge's surface and the edge-on-face surface
         // are coincident. Test the edge's surface normal
         // to see if it's with same or opposite normals.
         if(inter_surf_n.Dot(edge_surf_n) > 0) {
+dbp("Coincident Same, curvature: %f", curvature);
             return Class::COINC_SAME;
         } else {
+dbp("Coincident Opposite, curvature: %f", curvature);
             return Class::COINC_OPP;
         }
     } else if(dot > 0) {
@@ -422,8 +425,12 @@ SShell::Class SShell::ClassifyRegion(Vector edge_n, Vector inter_surf_n,
 // table of vectors in 6 arbitrary directions covering 4 of the 8 octants.
 // use overlapping sets of 3 to reduce memory usage.
 static const double Random[8] = {1.278, 5.0103, 9.427, -2.331, 7.13, 2.954, 5.034, -4.777};
- 
-bool SShell::ClassifyEdge(Class *indir, Class *outdir,
+
+// This really classifies the surface patches on either side of an edge
+// as inside / outside / tangent-to (coincident with) this shell
+// I believe in tangent cases we should look at curvature to see
+// if it ends up inside or outside rather than declared coincident
+bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
                           Vector ea, Vector eb,
                           Vector p,
                           Vector edge_n_in, Vector edge_n_out, Vector surf_n)
@@ -454,6 +461,7 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir,
                     // out.
                     inter_edge_n[edge_inters] =
                       (inter_surf_n[edge_inters]).Cross((se->b).Minus((se->a)));
+// get the curvature here too
                 }
 
                 edge_inters++;
@@ -537,9 +545,12 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir,
 
         Vector surf_n_in  = srf.NormalAt(pin),
                surf_n_out = srf.NormalAt(pout);
-
-        *indir  = ClassifyRegion(edge_n_in,  surf_n_in,  surf_n);
-        *outdir = ClassifyRegion(edge_n_out, surf_n_out, surf_n);
+        *indir  = ClassifyRegion(edge_n_in,  surf_n_in,  surf_n, curvature);
+        *outdir = ClassifyRegion(edge_n_out, surf_n_out, surf_n, curvature);
+if((*indir == Class::COINC_SAME) && (*outdir == Class::COINC_SAME))
+{
+    dbp("BOTH_SAME");
+}
         return true;
     }
 

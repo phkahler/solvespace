@@ -420,6 +420,7 @@ void SSurface::EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
                                         Vector *pt,
                                         Vector *enin, Vector *enout,
                                         Vector *surfn,
+                                        double *curvature,
                                         uint32_t auxA,
                                         SShell *shell, SShell *sha, SShell *shb)
 {
@@ -451,6 +452,8 @@ void SSurface::EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
     // Compute the edge's inner normal in xyz space.
     Vector ab    = (PointAt(auv)).Minus(PointAt(buv)),
            enxyz = (ab.Cross(*surfn)).WithMagnitude(SS.ChordTolMm());
+//           enxyz = (ab.Cross(*surfn)).WithMagnitude(10);
+//^^^^^^ THAT
     // And based on that, compute the edge's inner normal in uv space. This
     // vector is perpendicular to the edge in xyz, but not necessarily in uv.
     Vector tu, tv, tx, ty;
@@ -472,6 +475,8 @@ void SSurface::EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
            pout  = PointAt(muv.Plus(enuv));
     *enin  = pin.Minus(*pt),
     *enout = pout.Minus(*pt);
+    
+    *curvature = CurvatureAt(muv, enuv.x,enuv.y);
 }
 
 //-----------------------------------------------------------------------------
@@ -606,25 +611,40 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
         Point2d auv  = (se->a).ProjectXy(),
                 buv  = (se->b).ProjectXy();
 
+        double curvature_in;
         Vector pt, enin, enout, surfn;
         ret.EdgeNormalsWithinSurface(auv, buv, &pt, &enin, &enout, &surfn,
-                                        se->auxA, into, sha, shb);
+                           &curvature_in, se->auxA, into, sha, shb);
 
         SShell::Class indir_shell, outdir_shell, indir_orig, outdir_orig;
 
         indir_orig  = SShell::Class::INSIDE;
         outdir_orig = SShell::Class::OUTSIDE;
-
-        agnst->ClassifyEdge(&indir_shell, &outdir_shell,
+        agnst->ClassifyEdge(&indir_shell, &outdir_shell, curvature_in,
                             ret.PointAt(auv), ret.PointAt(buv), pt,
                             enin, enout, surfn);
 
+if((indir_shell == SShell::Class::COINC_OPP) && (outdir_shell == SShell::Class::COINC_OPP))
+{
+dbp("--- === coincident === ---");
+    // Find the other surface that this curve trims.
+//    hSCurve hc = { se->auxA };
+//    SCurve *sc = into->curve.FindById(hc);
+//    hSSurface hother = (sc->surfA == h) ?  sc->surfB : sc->surfA;
+//    SSurface *other = into->surface.FindById(hother);
+
+//  dbp("coincident ----===---  %d", other->degm + other->degn);
+//  outdir_shell = SShell::Class::OUTSIDE;
+//  indir_shell = SShell::Class::INSIDE;
+}
         if(KeepEdge(type, opA, indir_shell, outdir_shell,
                                indir_orig,  outdir_orig))
         {
             for(se = chain.l.First(); se; se = chain.l.NextAfter(se)) {
                 final.AddEdge(se->a, se->b, se->auxA, se->auxB);
             }
+        }
+        else {
         }
         chain.Clear();
     }
@@ -639,19 +659,23 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
         Point2d auv = (se->a).ProjectXy(),
                 buv = (se->b).ProjectXy();
 
+        double curvature_in;
         Vector pt, enin, enout, surfn;
         ret.EdgeNormalsWithinSurface(auv, buv, &pt, &enin, &enout, &surfn,
-                                        se->auxA, into, sha, shb);
+                             &curvature_in, se->auxA, into, sha, shb);
 
         SShell::Class indir_shell, outdir_shell, indir_orig, outdir_orig;
 
         SBspUv::Class c_this = (origBsp) ? origBsp->ClassifyEdge(auv, buv, &ret) : SBspUv::Class::OUTSIDE;
         TagByClassifiedEdge(c_this, &indir_orig, &outdir_orig);
 
-        agnst->ClassifyEdge(&indir_shell, &outdir_shell,
+        agnst->ClassifyEdge(&indir_shell, &outdir_shell, curvature_in,
                             ret.PointAt(auv), ret.PointAt(buv), pt,
                             enin, enout, surfn);
 
+if((indir_shell == SShell::Class::COINC_SAME) && (outdir_shell == SShell::Class::COINC_SAME)) {
+  dbp("coincident");
+}
         if(KeepEdge(type, opA, indir_shell, outdir_shell,
                                indir_orig,  outdir_orig))
         {

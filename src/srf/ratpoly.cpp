@@ -378,6 +378,20 @@ Vector SSurface::NormalAt(double u, double v) const {
     return tu.Cross(tv);
 }
 
+// This is a crude numerical version using a samll delta_uv (not 2nd derivative)
+double SSurface::CurvatureAt(Point2d puv, double du, double dv) const {
+    Vector tu1, tv1, tu2, tv2 , t1, t2;
+    TangentsAt(puv.x, puv.y, &tu1, &tv1);
+    t1 = tu1.ScaledBy(du*1000).Plus(tv1.ScaledBy(dv*1000));
+    
+    TangentsAt(puv.x+du*100, puv.y+dv*100, &tu2,&tv2);
+    t2 = tu2.ScaledBy(du*1000).Plus(tv2.ScaledBy(dv*1000));
+    
+    Vector N = tu1.Cross(tv1);
+    double curvature = N.Dot(t2.Minus(t1))/(sqrt(du*du+dv*dv)); //multiply because duv is so small
+    return (curvature);    
+}
+
 void SSurface::ClosestPointTo(Vector p, Point2d *puv, bool mustConverge) {
     ClosestPointTo(p, &(puv->x), &(puv->y), mustConverge);
 }

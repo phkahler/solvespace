@@ -296,6 +296,7 @@ public:
     void EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
                                   Vector *pt, Vector *enin, Vector *enout,
                                   Vector *surfn,
+                                  double *curvature,
                                   uint32_t auxA,
                                   SShell *shell, SShell *sha, SShell *shb);
     void FindChainAvoiding(SEdgeList *src, SEdgeList *dest, SPointList *avoid);
@@ -339,6 +340,7 @@ public:
     void TangentsAt(double u, double v, Vector *tu, Vector *tv, bool retry=true) const;
     Vector NormalAt(Point2d puv) const;
     Vector NormalAt(double u, double v) const;
+    double CurvatureAt(Point2d puv, double du, double dv) const;
     bool LineEntirelyOutsideBbox(Vector a, Vector b, bool asSegment) const;
     void GetAxisAlignedBounding(Vector *ptMax, Vector *ptMin) const;
     bool CoincidentWithPlane(Vector n, double d) const;
@@ -414,9 +416,9 @@ public:
     };
     static const double DOTP_TOL;
     Class ClassifyRegion(Vector edge_n, Vector inter_surf_n,
-                       Vector edge_surf_n) const;
+                       Vector edge_surf_n, double curvature) const;
 
-    bool ClassifyEdge(Class *indir, Class *outdir,
+    bool ClassifyEdge(Class *indir, Class *outdir, double curvature,
                       Vector ea, Vector eb,
                       Vector p, Vector edge_n_in,
                       Vector edge_n_out, Vector surf_n);
