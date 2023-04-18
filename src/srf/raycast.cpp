@@ -400,15 +400,15 @@ dbp("curvature: %f", curvature);
         // to see if it's with same or opposite normals.
         if(inter_surf_n.Dot(edge_surf_n) > 0) {
 dbp("Coincident Same, curvature: %f", curvature);
-            return Class::COINC_SAME;
+            return Class::SURF_COINC_SAME;
         } else {
 dbp("Coincident Opposite, curvature: %f", curvature);
-            return Class::COINC_OPP;
+            return Class::SURF_COINC_OPP;
         }
     } else if(dot > 0) {
-        return Class::OUTSIDE;
+        return Class::SURF_OUTSIDE;
     } else {
-        return Class::INSIDE;
+        return Class::SURF_INSIDE;
     }
 }
 
@@ -465,7 +465,7 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
                     Vector edge_norm = (inter_surf_n[edge_inters]).Cross((se->b).Minus((se->a)));
                     inter_edge_n[edge_inters] = edge_norm;
                       
-// get the curvature here too
+                    // get the curvature here too
                     inter_curvature[edge_inters] = srf.Curvature(pm, edge_norm);
                 }
 
@@ -479,16 +479,24 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
         double dotp[2];
         for(int i = 0; i < 2; i++) {
             dotp[i] = edge_n_out.DirectionCosineWith(inter_surf_n[i]);
+            // ***new!***
+            if(fabs(dotp[i]) < DOTP_TOL && fabs(inter_curvature[i]) > DOTP_TOL)
+            {
+                // looks like a tangent surface but it's curved...
+                if(inter_curvature[i] < 0)
+                  dotp[i] = 2*DOTP_TOL;
+            }
         }
 
         if(fabs(dotp[1]) < DOTP_TOL) {
             swap(dotp[0],         dotp[1]);
             swap(inter_surf_n[0], inter_surf_n[1]);
             swap(inter_edge_n[0], inter_edge_n[1]);
+            swap(inter_curvature[0], inter_curvature[1]);
         }
 
-        Class coinc = (surf_n.Dot(inter_surf_n[0])) > 0 ? Class::COINC_SAME : Class::COINC_OPP;
-
+        Class coinc = (surf_n.Dot(inter_surf_n[0])) > 0 ? Class::SURF_COINC_SAME : Class::SURF_COINC_OPP;
+        
         if(fabs(dotp[0]) < DOTP_TOL && fabs(dotp[1]) < DOTP_TOL) {
             // This is actually an edge on face case, just that the face
             // is split into two pieces joining at our edge.
@@ -497,25 +505,25 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
         } else if(fabs(dotp[0]) < DOTP_TOL && dotp[1] > DOTP_TOL) {
             if(edge_n_out.Dot(inter_edge_n[0]) > 0) {
                 *indir  = coinc;
-                *outdir = Class::OUTSIDE;
+                *outdir = Class::SURF_OUTSIDE;
             } else {
-                *indir  = Class::INSIDE;
+                *indir  = Class::SURF_INSIDE;
                 *outdir = coinc;
             }
         } else if(fabs(dotp[0]) < DOTP_TOL && dotp[1] < -DOTP_TOL) {
             if(edge_n_out.Dot(inter_edge_n[0]) > 0) {
                 *indir  = coinc;
-                *outdir = Class::INSIDE;
+                *outdir = Class::SURF_INSIDE;
             } else {
-                *indir  = Class::OUTSIDE;
+                *indir  = Class::SURF_OUTSIDE;
                 *outdir = coinc;
             }
         } else if(dotp[0] > DOTP_TOL && dotp[1] > DOTP_TOL) {
-            *indir  = Class::INSIDE;
-            *outdir = Class::OUTSIDE;
+            *indir  = Class::SURF_INSIDE;
+            *outdir = Class::SURF_OUTSIDE;
         } else if(dotp[0] < -DOTP_TOL && dotp[1] < -DOTP_TOL) {
-            *indir  = Class::OUTSIDE;
-            *outdir = Class::INSIDE;
+            *indir  = Class::SURF_OUTSIDE;
+            *outdir = Class::SURF_INSIDE;
         } else {
             // Edge is tangent to the shell at shell's edge, so can't be
             // a boundary of the surface.
@@ -552,7 +560,7 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
                surf_n_out = srf.NormalAt(pout);
         *indir  = ClassifyRegion(edge_n_in,  surf_n_in,  surf_n, curvature);
         *outdir = ClassifyRegion(edge_n_out, surf_n_out, surf_n, curvature);
-if((*indir == Class::COINC_SAME) && (*outdir == Class::COINC_SAME))
+if((*indir == Class::SURF_COINC_SAME) && (*outdir == Class::SURF_COINC_SAME))
 {
     dbp("BOTH_SAME");
 }
@@ -573,8 +581,8 @@ if((*indir == Class::COINC_SAME) && (*outdir == Class::COINC_SAME))
                 /*asSegment=*/false, /*trimmed=*/true, /*inclTangent=*/false);
 
         // no intersections means it's outside
-        *indir  = Class::OUTSIDE;
-        *outdir = Class::OUTSIDE;
+        *indir  = Class::SURF_OUTSIDE;
+        *outdir = Class::SURF_OUTSIDE;
         double dmin = VERY_POSITIVE;
         bool onEdge = false;
         edge_inters = 0;
@@ -600,11 +608,11 @@ if((*indir == Class::COINC_SAME) && (*outdir == Class::COINC_SAME))
                 // Edge does not lie on surface; either strictly inside
                 // or strictly outside
                 if((si->surfNormal).Dot(ray) > 0) {
-                    *indir  = Class::INSIDE;
-                    *outdir = Class::INSIDE;
+                    *indir  = Class::SURF_INSIDE;
+                    *outdir = Class::SURF_INSIDE;
                 } else {
-                    *indir  = Class::OUTSIDE;
-                    *outdir = Class::OUTSIDE;
+                    *indir  = Class::SURF_OUTSIDE;
+                    *outdir = Class::SURF_OUTSIDE;
                 }
                 onEdge = si->onEdge;
             }
