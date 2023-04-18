@@ -560,7 +560,7 @@ bool SSurface::PointIntersectingLine(Vector p0, Vector p1, double *u, double *v)
     return false;
 }
 
-Vector SSurface::ClosestPointOnThisAndSurface(SSurface *srf2, Vector p) {
+Vector SSurface::ClosestPointOnThisAndSurface(SSurface *srf2, Vector p, Vector *normal) {
     // This is untested.
     int i, j;
     Point2d puv[2];
@@ -570,6 +570,7 @@ Vector SSurface::ClosestPointOnThisAndSurface(SSurface *srf2, Vector p) {
         (srf[j])->ClosestPointTo(p, &(puv[j]), /*mustConverge=*/false);
     }
 
+    Vector dp;
     for(i = 0; i < 10; i++) {
         Vector tu[2], tv[2], cp[2], n[2];
         double d[2];
@@ -585,8 +586,8 @@ Vector SSurface::ClosestPointOnThisAndSurface(SSurface *srf2, Vector p) {
 
         if((cp[0]).Equals(cp[1], RATPOLY_EPS)) break;
 
-        Vector p0 = Vector::AtIntersectionOfPlanes(n[0], d[0], n[1], d[1]),
-               dp = (n[0]).Cross(n[1]);
+        Vector p0 = Vector::AtIntersectionOfPlanes(n[0], d[0], n[1], d[1]);
+        dp = (n[0]).Cross(n[1]);
 
         Vector pc = p.ClosestPointOnLine(p0, dp);
 
@@ -607,6 +608,7 @@ Vector SSurface::ClosestPointOnThisAndSurface(SSurface *srf2, Vector p) {
             (puv[0].Minus(puv[1])).Magnitude());
     }
 
+    *normal = dp;
     // If this converged, then the two points are actually equal.
     return ((srf[0])->PointAt(puv[0])).Plus(
            ((srf[1])->PointAt(puv[1]))).ScaledBy(0.5);

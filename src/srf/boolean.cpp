@@ -426,7 +426,7 @@ void SSurface::EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
 {
     // the midpoint of the edge
     Point2d muv  = (auv.Plus(buv)).ScaledBy(0.5);
-
+    Vector tangent;
     *pt    = PointAt(muv);
 
     // If this edge just approximates a curve, then refine our midpoint so
@@ -437,22 +437,24 @@ void SSurface::EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
     if(sc->isExact && sc->exact.deg != 1) {
         double t;
         sc->exact.ClosestPointTo(*pt, &t, /*mustConverge=*/false);
+        tangent = sc->exact.TangentAt(t);
         *pt = sc->exact.PointAt(t);
-        ClosestPointTo(*pt, &muv);
     } else if(!sc->isExact) {
         SSurface *trimmedA = sc->GetSurfaceA(sha, shb),
                  *trimmedB = sc->GetSurfaceB(sha, shb);
-        *pt = trimmedA->ClosestPointOnThisAndSurface(trimmedB, *pt);
-        ClosestPointTo(*pt, &muv);
+        *pt = trimmedA->ClosestPointOnThisAndSurface(trimmedB, *pt, &tangent);
     }
+    ClosestPointTo(*pt, &muv);
 
     *surfn = NormalAt(muv.x, muv.y);
 
     // Compute the edge's inner normal in xyz space.
-    Vector ab    = (PointAt(auv)).Minus(PointAt(buv)),
-           enxyz = (ab.Cross(*surfn)).WithMagnitude(SS.ChordTolMm());
-//           enxyz = (ab.Cross(*surfn)).WithMagnitude(10);
-//^^^^^^ THAT
+    Vector ab    = (PointAt(auv)).Minus(PointAt(buv));
+    if (tangent.Dot(ab)<0.0) tangent = tangent.ScaledBy(-1.0);
+//    Vector enxyz = (tangent.Cross(*surfn)).WithMagnitude(SS.ChordTolMm());
+    Vector enxyz = (ab.Cross(*surfn)).WithMagnitude(SS.ChordTolMm());
+
+
     // And based on that, compute the edge's inner normal in uv space. This
     // vector is perpendicular to the edge in xyz, but not necessarily in uv.
     Vector tu, tv, tx, ty;
@@ -474,8 +476,12 @@ void SSurface::EdgeNormalsWithinSurface(Point2d auv, Point2d buv,
            pout  = PointAt(muv.Plus(enuv));
     *enin  = pin.Minus(*pt),
     *enout = pout.Minus(*pt);
-    
     *curvature = CurvatureAt(muv, enuv.x,enuv.y);
+/* 
+    *enin = enxyz.ScaledBy(-1.0);
+    *enout = enxyz;
+    *curvature = Curvature(muv, *enin);
+*/
 }
 
 //-----------------------------------------------------------------------------

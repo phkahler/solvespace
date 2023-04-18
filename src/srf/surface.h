@@ -332,7 +332,7 @@ public:
     bool ClosestPointNewton(Vector p, double *u, double *v, bool mustConverge=true) const;
 
     bool PointIntersectingLine(Vector p0, Vector p1, double *u, double *v) const;
-    Vector ClosestPointOnThisAndSurface(SSurface *srf2, Vector p);
+    Vector ClosestPointOnThisAndSurface(SSurface *srf2, Vector p, Vector *normal);
     void PointOnSurfaces(SSurface *s1, SSurface *s2, double *u, double *v);
     void PointOnCurve(const SBezier *curve, double *up, double *vp);
     Vector PointAt(double u, double v) const;
