@@ -479,12 +479,14 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir, double curvature,
         double dotp[2];
         for(int i = 0; i < 2; i++) {
             dotp[i] = edge_n_out.DirectionCosineWith(inter_surf_n[i]);
-            // ***new!***
-            if(fabs(dotp[i]) < DOTP_TOL && fabs(inter_curvature[i]) > DOTP_TOL)
+            // ***new!***  helps one surface in bug_repro.slvs
+            if(fabs(dotp[i]) < DOTP_TOL && fabs(inter_curvature[i]) > 0.1)
             {
                 // looks like a tangent surface but it's curved...
                 if(inter_curvature[i] < 0)
-                  dotp[i] = 2*DOTP_TOL;
+                  dotp[i] = -20*DOTP_TOL;
+                else
+                  dotp[i] = 20*DOTP_TOL;                
             }
         }
 
