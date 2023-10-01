@@ -9,7 +9,7 @@ include_directories(
 set(HAVE_SPACEWARE ${SPACEWARE_FOUND})
 
 if(NOT WIN32 OR APPLE)
-    if(GTKMM_gtkmm-3.0_VERSION VERSION_LESS "3.24.0")
+    if(GTKMM_gtkmm-4.0_VERSION VERSION_LESS "4.0.0")
         set(HAVE_GTK_FILECHOOSERNATIVE 0)
     else()
         set(HAVE_GTK_FILECHOOSERNATIVE 1)
@@ -102,7 +102,7 @@ endif()
 
 set(every_platform_SOURCES
     platform/guiwin.cpp
-    platform/guigtk.cpp
+    platform/guigtk4.cpp
     platform/guimac.mm
     platform/guihtml.cpp)
 
@@ -356,7 +356,7 @@ if(ENABLE_GUI)
             VERBATIM)
     else()
         target_sources(solvespace PRIVATE
-            platform/guigtk.cpp)
+            platform/guigtk4.cpp)
 
         target_include_directories(solvespace PRIVATE SYSTEM
             ${GTKMM_INCLUDE_DIRS}

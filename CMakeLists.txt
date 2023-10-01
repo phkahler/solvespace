@@ -11,7 +11,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH
     "${CMAKE_SOURCE_DIR}/cmake/")
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 # for /MT on MSVC
@@ -318,7 +318,7 @@ if(ENABLE_GUI)
         find_package(SpaceWare)
         pkg_check_modules(FONTCONFIG REQUIRED fontconfig)
         pkg_check_modules(JSONC REQUIRED json-c)
-        pkg_check_modules(GTKMM REQUIRED gtkmm-3.0>=3.18 pangomm-1.4 x11)
+        pkg_check_modules(GTKMM REQUIRED gtkmm-4.0>=4.0 pangomm-1.4 x11)
     endif()
 endif()
 
