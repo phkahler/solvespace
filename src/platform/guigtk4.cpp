@@ -244,7 +244,8 @@ TimerRef CreateTimer() {
 // GTK menu extensions
 //-----------------------------------------------------------------------------
 
-class GtkMenuItem : public Gtk::CheckMenuItem {
+//class GtkMenuItem : public Gtk::CheckMenuItem {
+class GtkMenuItem : public Gtk::PopoverMenu {
     Platform::MenuItem *_receiver;
     bool                _has_indicator;
     bool                _synthetic_event;
@@ -255,7 +256,7 @@ public:
     }
 
     void set_accel_key(const Gtk::AccelKey &accel_key) {
-        Gtk::CheckMenuItem::set_accel_key(accel_key);
+//        Gtk::CheckMenuItem::set_accel_key(accel_key);
     }
 
     bool has_indicator() const {
@@ -267,26 +268,28 @@ public:
     }
 
     void set_active(bool active) {
-        if(Gtk::CheckMenuItem::get_active() == active)
+//        if(Gtk::CheckMenuItem::get_active() == active)
             return;
 
         _synthetic_event = true;
-        Gtk::CheckMenuItem::set_active(active);
+//        Gtk::CheckMenuItem::set_active(active);
         _synthetic_event = false;
     }
 
 protected:
-    void on_activate() override {
-        Gtk::CheckMenuItem::on_activate();
+// was override
+    void on_activate() {
+//        Gtk::CheckMenuItem::on_activate();
 
         if(!_synthetic_event && _receiver->onTrigger) {
             _receiver->onTrigger();
         }
     }
 
-    void draw_indicator_vfunc(const Cairo::RefPtr<Cairo::Context> &cr) override {
+// was override
+    void draw_indicator_vfunc(const Cairo::RefPtr<Cairo::Context> &cr) {
         if(_has_indicator) {
-            Gtk::CheckMenuItem::draw_indicator_vfunc(cr);
+//            Gtk::CheckMenuItem::draw_indicator_vfunc(cr);
         }
     }
 };
@@ -319,10 +322,12 @@ public:
 
         Gdk::ModifierType accelMods = {};
         if(accel.shiftDown) {
-            accelMods |= Gdk::SHIFT_MASK;
+//            accelMods |= Gdk::SHIFT_MASK;
+            accelMods |= Gdk::ModifierType::SHIFT_MASK;
         }
         if(accel.controlDown) {
-            accelMods |= Gdk::CONTROL_MASK;
+//            accelMods |= Gdk::CONTROL_MASK;
+            accelMods |= Gdk::ModifierType::CONTROL_MASK;
         }
 
         gtkMenuItem.set_accel_key(Gtk::AccelKey(accelKey, accelMods));
@@ -336,12 +341,12 @@ public:
 
             case Indicator::CHECK_MARK:
                 gtkMenuItem.set_has_indicator(true);
-                gtkMenuItem.set_draw_as_radio(false);
+//                gtkMenuItem.set_draw_as_radio(false);
                 break;
 
             case Indicator::RADIO_MARK:
                 gtkMenuItem.set_has_indicator(true);
-                gtkMenuItem.set_draw_as_radio(true);
+//                gtkMenuItem.set_draw_as_radio(true);
                 break;
         }
     }
@@ -359,7 +364,8 @@ public:
 
 class MenuImplGtk final : public Menu {
 public:
-    Gtk::Menu   gtkMenu;
+// should this be a Gtk::PopoverMenuBar ?
+    Gtk::PopoverMenu   gtkMenu;
     std::vector<std::shared_ptr<MenuItemImplGtk>>   menuItems;
     std::vector<std::shared_ptr<MenuImplGtk>>       subMenus;
 
@@ -369,11 +375,12 @@ public:
         auto menuItem = std::make_shared<MenuItemImplGtk>();
         menuItems.push_back(menuItem);
 
-        menuItem->gtkMenuItem.set_label(mnemonics ? PrepareMnemonics(label) : label);
-        menuItem->gtkMenuItem.set_use_underline(mnemonics);
+//        menuItem->gtkMenuItem.set_label(mnemonics ? PrepareMnemonics(label) : label);
+        menuItem->gtkMenuItem.set_name(mnemonics ? PrepareMnemonics(label) : label);
+//        menuItem->gtkMenuItem.set_use_underline(mnemonics);
         menuItem->gtkMenuItem.show();
         menuItem->onTrigger = onTrigger;
-        gtkMenu.append(menuItem->gtkMenuItem);
+//        gtkMenu.append(menuItem->gtkMenuItem);
 
         return menuItem;
     }
@@ -385,33 +392,35 @@ public:
         auto subMenu = std::make_shared<MenuImplGtk>();
         subMenus.push_back(subMenu);
 
-        menuItem->gtkMenuItem.set_label(PrepareMnemonics(label));
-        menuItem->gtkMenuItem.set_use_underline(true);
-        menuItem->gtkMenuItem.set_submenu(subMenu->gtkMenu);
-        menuItem->gtkMenuItem.show_all();
-        gtkMenu.append(menuItem->gtkMenuItem);
+//        menuItem->gtkMenuItem.set_label(PrepareMnemonics(label));
+        menuItem->gtkMenuItem.set_name(PrepareMnemonics(label));
+//        menuItem->gtkMenuItem.set_use_underline(true);
+//        menuItem->gtkMenuItem.set_submenu(subMenu->gtkMenu);
+//        menuItem->gtkMenuItem.show_all();
+//        gtkMenu.append(menuItem->gtkMenuItem);
 
         return subMenu;
     }
 
     void AddSeparator() override {
-        Gtk::SeparatorMenuItem *gtkMenuItem = Gtk::manage(new Gtk::SeparatorMenuItem());
-        gtkMenuItem->show();
-        gtkMenu.append(*Gtk::manage(gtkMenuItem));
+//        Gtk::SeparatorMenuItem *gtkMenuItem = Gtk::manage(new Gtk::SeparatorMenuItem());
+//        gtkMenuItem->show();
+//        gtkMenu.append(*Gtk::manage(gtkMenuItem));
     }
 
     void PopUp() override {
         Glib::RefPtr<Glib::MainLoop> loop = Glib::MainLoop::create();
-        auto signal = gtkMenu.signal_deactivate().connect([&]() { loop->quit(); });
+//        auto signal = gtkMenu.signal_deactivate().connect([&]() { loop->quit(); });
+        auto signal = gtkMenu.signal_realize().connect([&]() { loop->quit(); });
 
-        gtkMenu.show_all();
-        gtkMenu.popup(0, GDK_CURRENT_TIME);
+//        gtkMenu.show_all();
+//        gtkMenu.popup(0, GDK_CURRENT_TIME);
         loop->run();
         signal.disconnect();
     }
 
     void Clear() override {
-        gtkMenu.foreach([&](Gtk::Widget &w) { gtkMenu.remove(w); });
+//        gtkMenu.foreach([&](Gtk::Widget &w) { gtkMenu.remove(w); });
         menuItems.clear();
         subMenus.clear();
     }
@@ -423,25 +432,25 @@ MenuRef CreateMenu() {
 
 class MenuBarImplGtk final : public MenuBar {
 public:
-    Gtk::MenuBar    gtkMenuBar;
+    Gtk::PopoverMenuBar    gtkMenuBar;
     std::vector<std::shared_ptr<MenuImplGtk>>       subMenus;
 
     MenuRef AddSubMenu(const std::string &label) override {
         auto subMenu = std::make_shared<MenuImplGtk>();
         subMenus.push_back(subMenu);
 
-        Gtk::MenuItem *gtkMenuItem = Gtk::manage(new Gtk::MenuItem);
-        gtkMenuItem->set_label(PrepareMnemonics(label));
-        gtkMenuItem->set_use_underline(true);
-        gtkMenuItem->set_submenu(subMenu->gtkMenu);
-        gtkMenuItem->show_all();
-        gtkMenuBar.append(*gtkMenuItem);
+        Gtk::PopoverMenu *gtkMenuItem = Gtk::manage(new Gtk::PopoverMenu);
+        gtkMenuItem->set_name(PrepareMnemonics(label));
+//        gtkMenuItem->set_use_underline(true);
+//        gtkMenuItem->set_submenu(subMenu->gtkMenu);
+//        gtkMenuItem->show_all();
+//        gtkMenuBar.append(*gtkMenuItem);
 
         return subMenu;
     }
 
     void Clear() override {
-        gtkMenuBar.foreach([&](Gtk::Widget &w) { gtkMenuBar.remove(w); });
+//        gtkMenuBar.foreach([&](Gtk::Widget &w) { gtkMenuBar.remove(w); });
         subMenus.clear();
     }
 };
