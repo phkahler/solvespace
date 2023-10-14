@@ -8,23 +8,28 @@
 #include <unistd.h>
 #include <json-c/json_object.h>
 #include <json-c/json_util.h>
+
+#include <gtk/gtk.h>
+#include <gtkmm.h>
+
 #include <glibmm/convert.h>
 #include <glibmm/main.h>
 #include <gtkmm/box.h>
-#include <gtkmm/checkmenuitem.h>
+//#include <gtkmm/checkmenuitem.h>
 #include <gtkmm/cssprovider.h>
 #include <gtkmm/entry.h>
 #include <gtkmm/filechooserdialog.h>
 #include <gtkmm/fixed.h>
 #include <gtkmm/glarea.h>
-#include <gtkmm/main.h>
-#include <gtkmm/menu.h>
-#include <gtkmm/menubar.h>
+//#include <gtkmm/main.h>
+//#include <gtkmm/menu.h>
+//#include <gtkmm/menubar.h>
 #include <gtkmm/messagedialog.h>
 #include <gtkmm/scrollbar.h>
-#include <gtkmm/separatormenuitem.h>
+//#include <gtkmm/separatormenuitem.h>
 #include <gtkmm/tooltip.h>
 #include <gtkmm/window.h>
+#include <gdkmm/seat.h>
 
 #include "config.h"
 #if defined(HAVE_GTK_FILECHOOSERNATIVE)
@@ -35,15 +40,10 @@
 #   include <spnav.h>
 #   include <gdk/gdk.h>
 #   if defined(GDK_WINDOWING_X11)
-#       include <gdk/gdkx.h>
+//#       include <gdk/gdkx.h>
 #   endif
 #   if defined(GDK_WINDOWING_WAYLAND)
-#       include <gdk/gdkwayland.h>
-#   endif
-#   if GTK_CHECK_VERSION(3, 20, 0)
-#       include <gdkmm/seat.h>
-#   else
-#       include <gdkmm/devicemanager.h>
+//#       include <gdk/gdkwayland.h>
 #   endif
 #endif
 
@@ -1159,11 +1159,7 @@ static gboolean ConsumeSpnavQueue(GIOChannel *, GIOCondition, gpointer data) {
     // We don't get modifier state through the socket.
     int x, y;
     Gdk::ModifierType mask{};
-#if GTK_CHECK_VERSION(3, 20, 0)
     Glib::RefPtr<Gdk::Device> device = gdkWindow->get_display()->get_default_seat()->get_pointer();
-#else
-    Glib::RefPtr<Gdk::Device> device = gdkWindow->get_display()->get_device_manager()->get_client_pointer();
-#endif
     gdkWindow->get_device_position(device, x, y, mask);
     bool shiftDown   = (mask & Gdk::SHIFT_MASK)   != 0;
     bool controlDown = (mask & Gdk::CONTROL_MASK) != 0;
