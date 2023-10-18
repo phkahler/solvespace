@@ -471,6 +471,7 @@ public:
     GtkGLWidget(Platform::Window *receiver) : _receiver(receiver) {
         set_has_depth_buffer(true);
         set_can_focus(true);
+/*
         set_events(Gdk::POINTER_MOTION_MASK |
                    Gdk::BUTTON_PRESS_MASK |
                    Gdk::BUTTON_RELEASE_MASK |
@@ -479,15 +480,17 @@ public:
                    Gdk::LEAVE_NOTIFY_MASK |
                    Gdk::KEY_PRESS_MASK |
                    Gdk::KEY_RELEASE_MASK);
+*/
     }
 
 protected:
+/*
     // Work around a bug fixed in GTKMM 3.22:
     // https://mail.gnome.org/archives/gtkmm-list/2016-April/msg00020.html
     Glib::RefPtr<Gdk::GLContext> on_create_context() override {
         return get_window()->create_gl_context();
     }
-
+*/
     bool on_render(const Glib::RefPtr<Gdk::GLContext> &context) override {
         if(_receiver->onRender) {
             _receiver->onRender();
@@ -525,64 +528,64 @@ protected:
         return false;
     }
 
-    bool on_motion_notify_event(GdkEventMotion *gdk_event) override {
+    bool on_motion_notify_event(GdkEvent *gdk_event) {
         double x,y;
         GdkModifierType state;
-        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
-        gdk_event_get_state((GdkEvent*)gdk_event, &state);
+//        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
+//        gdk_event_get_state((GdkEvent*)gdk_event, &state);
         
         if(process_pointer_event(MouseEvent::Type::MOTION, x, y, state))
             return true;
 
-        return Gtk::GLArea::on_motion_notify_event(gdk_event);
+//        return Gtk::GLArea::on_motion_notify_event(gdk_event);
     }
 
-    bool on_button_press_event(GdkEventButton *gdk_event) override {
+    bool on_button_press_event(GdkEvent *gdk_event) {
         MouseEvent::Type type;
         GdkEventType gdk_type;
         gdk_type = gdk_event_get_event_type((GdkEvent*)gdk_event);
         
         if(gdk_type == GDK_BUTTON_PRESS) {
             type = MouseEvent::Type::PRESS;
-        } else if(gdk_type == GDK_2BUTTON_PRESS) {
-            type = MouseEvent::Type::DBL_PRESS;
+//        } else if(gdk_type == GDK_2BUTTON_PRESS) {
+//            type = MouseEvent::Type::DBL_PRESS;
         } else {
-            return Gtk::GLArea::on_button_press_event(gdk_event);
+//            return Gtk::GLArea::on_button_press_event(gdk_event);
         }
         double x,y;
-        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
+//        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
         GdkModifierType state;
-        gdk_event_get_state((GdkEvent*)gdk_event, &state);
+//        gdk_event_get_state((GdkEvent*)gdk_event, &state);
         guint button;
-        gdk_event_get_button((GdkEvent*)gdk_event, &button);
+//        gdk_event_get_button((GdkEvent*)gdk_event, &button);
 
         if(process_pointer_event(type, x, y, state, button))
             return true;
 
-        return Gtk::GLArea::on_button_press_event(gdk_event);
+//        return Gtk::GLArea::on_button_press_event(gdk_event);
     }
 
-    bool on_button_release_event(GdkEventButton *gdk_event) override {
+    bool on_button_release_event(GdkEvent *gdk_event) {
         double x,y;
-        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
+//        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
         GdkModifierType state;
-        gdk_event_get_state((GdkEvent*)gdk_event, &state);
+//        gdk_event_get_state((GdkEvent*)gdk_event, &state);
         guint button;
-        gdk_event_get_button((GdkEvent*)gdk_event, &button);
+//        gdk_event_get_button((GdkEvent*)gdk_event, &button);
         if(process_pointer_event(MouseEvent::Type::RELEASE, x, y, state, button))
             return true;
 
-        return Gtk::GLArea::on_button_release_event(gdk_event);
+//        return Gtk::GLArea::on_button_release_event(gdk_event);
     }
 
-    bool on_scroll_event(GdkEventScroll *gdk_event) override {
+    bool on_scroll_event(GdkEvent *gdk_event) {
         double dx, dy;
         GdkScrollDirection dir;
 // for gtk4 ??
 //        gdk_scroll_event_get_deltas((GdkEvent*)gdk_event, &dx, &dy);
 //        gdk_scroll_event_get_direction((GdkEvent*)gdk_event, &dir);
-        gdk_event_get_scroll_direction((GdkEvent*)gdk_event, &dir);
-        gdk_event_get_scroll_deltas((GdkEvent*)gdk_event, &dx, &dy);
+//        gdk_event_get_scroll_direction((GdkEvent*)gdk_event, &dir);
+//        gdk_event_get_scroll_deltas((GdkEvent*)gdk_event, &dx, &dy);
         
         double delta;
         if(dy < 0 || dir == GDK_SCROLL_UP) {
@@ -594,46 +597,47 @@ protected:
         }
 
         double x,y;
-        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
+//        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
         GdkModifierType state;
-        gdk_event_get_state((GdkEvent*)gdk_event, &state);
+//        gdk_event_get_state((GdkEvent*)gdk_event, &state);
 
         if(process_pointer_event(MouseEvent::Type::SCROLL_VERT,
                                  x, y, state, 0, delta))
             return true;
 
-        return Gtk::GLArea::on_scroll_event(gdk_event);
+//        return Gtk::GLArea::on_scroll_event(gdk_event);
     }
 
-    bool on_leave_notify_event(GdkEventCrossing *gdk_event) override {
+    bool on_leave_notify_event(GdkEvent *gdk_event) {
         double x,y;
-        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
+//        gdk_event_get_coords((GdkEvent*)gdk_event, &x, &y);
         GdkModifierType state;
-        gdk_event_get_state((GdkEvent*)gdk_event, &state);
+//        gdk_event_get_state((GdkEvent*)gdk_event, &state);
         
         if(process_pointer_event(MouseEvent::Type::LEAVE, x, y, state))
             return true;
 
-        return Gtk::GLArea::on_leave_notify_event(gdk_event);
+//        return Gtk::GLArea::on_leave_notify_event(gdk_event);
     }
 
-    bool process_key_event(KeyboardEvent::Type type, GdkEventKey *gdk_event) {
+    bool process_key_event(KeyboardEvent::Type type, GdkEvent *gdk_event) {
         KeyboardEvent event = {};
         event.type = type;
 
         GdkModifierType state;
-        gdk_event_get_state((GdkEvent*)gdk_event, &state);
+//        gdk_event_get_state((GdkEvent*)gdk_event, &state);
 
-        Gdk::ModifierType mod_mask = get_modifier_mask(Gdk::MODIFIER_INTENT_DEFAULT_MOD_MASK);
-        if((state & mod_mask) & ~(GDK_SHIFT_MASK|GDK_CONTROL_MASK)) {
-            return false;
-        }
+//        Gdk::ModifierType mod_mask = get_modifier_mask(Gdk::MODIFIER_INTENT_DEFAULT_MOD_MASK);
+
+//        if((state & mod_mask) & ~(GDK_SHIFT_MASK|GDK_CONTROL_MASK)) {
+//            return false;
+//        }
 
         event.shiftDown   = (state & GDK_SHIFT_MASK)   != 0;
         event.controlDown = (state & GDK_CONTROL_MASK) != 0;
         
         guint keyval;
-        gdk_event_get_keyval((GdkEvent*)gdk_event, &keyval);
+//        gdk_event_get_keyval((GdkEvent*)gdk_event, &keyval);
 
         char32_t chr = gdk_keyval_to_unicode(gdk_keyval_to_lower(keyval));
         if(chr != 0) {
@@ -654,18 +658,18 @@ protected:
         return false;
     }
 
-    bool on_key_press_event(GdkEventKey *gdk_event) override {
+    bool on_key_press_event(GdkEvent *gdk_event) {
         if(process_key_event(KeyboardEvent::Type::PRESS, gdk_event))
             return true;
 
-        return Gtk::GLArea::on_key_press_event(gdk_event);
+//        return Gtk::GLArea::on_key_press_event(gdk_event);
     }
 
-    bool on_key_release_event(GdkEventKey *gdk_event) override {
+    bool on_key_release_event(GdkEvent *gdk_event) {
         if(process_key_event(KeyboardEvent::Type::RELEASE, gdk_event))
             return true;
 
-        return Gtk::GLArea::on_key_release_event(gdk_event);
+//        return Gtk::GLArea::on_key_release_event(gdk_event);
     }
 };
 
@@ -676,14 +680,14 @@ class GtkEditorOverlay : public Gtk::Fixed {
 
 public:
     GtkEditorOverlay(Platform::Window *receiver) : _receiver(receiver), _gl_widget(receiver) {
-        add(_gl_widget);
+//        add(_gl_widget);
 
-        _entry.set_no_show_all(true);
+//        _entry.set_no_show_all(true);
         _entry.set_has_frame(false);
-        add(_entry);
+//        add(_entry);
 
-        _entry.signal_activate().
-            connect(sigc::mem_fun(this, &GtkEditorOverlay::on_activate));
+//        _entry.signal_activate().
+//            connect(sigc::mem_fun(this, &GtkEditorOverlay::on_activate));
     }
 
     bool is_editing() const {
@@ -695,7 +699,7 @@ public:
         Pango::FontDescription font_desc;
         font_desc.set_family(is_monospace ? "monospace" : "normal");
         font_desc.set_absolute_size(font_height * Pango::SCALE);
-        _entry.override_font(font_desc);
+//        _entry.override_font(font_desc);
 
         // The y coordinate denotes baseline.
         Pango::FontMetrics font_metrics = get_pango_context()->get_metrics(font_desc);
@@ -726,13 +730,13 @@ public:
 
             // We grab the input for ourselves and not the entry to still have
             // the pointer events go through the underlay.
-            add_modal_grab();
+//            add_modal_grab();
         }
     }
 
     void stop_editing() {
         if(_entry.is_visible()) {
-            remove_modal_grab();
+//            remove_modal_grab();
             _entry.hide();
             _gl_widget.grab_focus();
         }
@@ -743,6 +747,7 @@ public:
     }
 
 protected:
+/*
     bool on_key_press_event(GdkEventKey *gdk_event) override {
         guint keyval;
         gdk_event_get_keyval((GdkEvent*)gdk_event, &keyval);
@@ -758,7 +763,8 @@ protected:
 
         return Gtk::Fixed::on_key_press_event(gdk_event);
     }
-
+*/
+/*
     bool on_key_release_event(GdkEventKey *gdk_event) override {
         if(is_editing()) {
             _entry.event((GdkEvent *)gdk_event);
@@ -767,20 +773,20 @@ protected:
 
         return Gtk::Fixed::on_key_release_event(gdk_event);
     }
+*/
+    void on_size_allocate(Gtk::Allocation& allocation) {
+//        Gtk::Fixed::on_size_allocate(allocation);
 
-    void on_size_allocate(Gtk::Allocation& allocation) override {
-        Gtk::Fixed::on_size_allocate(allocation);
-
-        _gl_widget.size_allocate(allocation);
+//        _gl_widget.size_allocate(allocation);
 
         int width, height, min_height, natural_height;
         _entry.get_size_request(width, height);
-        _entry.get_preferred_height(min_height, natural_height);
+//        _entry.get_preferred_height(min_height, natural_height);
 
         Gtk::Allocation entry_rect = _entry.get_allocation();
         entry_rect.set_width(width);
         entry_rect.set_height(natural_height);
-        _entry.size_allocate(entry_rect);
+//        _entry.size_allocate(entry_rect);
     }
 
     void on_activate() {
@@ -792,11 +798,17 @@ protected:
 
 class GtkWindow : public Gtk::Window {
     Platform::Window   *_receiver;
-    Gtk::VBox           _vbox;
-    Gtk::MenuBar       *_menu_bar = NULL;
-    Gtk::HBox           _hbox;
+//    Gtk::VBox           _vbox;
+    Gtk::Box           _vbox;
+
+    Gtk::PopoverMenuBar       *_menu_bar = NULL;
+//    Gtk::HBox           _hbox;
+    Gtk::Box           _hbox;
+
     GtkEditorOverlay    _editor_overlay;
-    Gtk::VScrollbar     _scrollbar;
+//    Gtk::VScrollbar     _scrollbar;
+    Gtk::Scrollbar     _scrollbar;
+
     bool                _is_under_cursor = false;
     bool                _is_fullscreen = false;
     std::string         _tooltip_text;
@@ -804,40 +816,40 @@ class GtkWindow : public Gtk::Window {
 
 public:
     GtkWindow(Platform::Window *receiver) : _receiver(receiver), _editor_overlay(receiver) {
-        _hbox.pack_start(_editor_overlay, /*expand=*/true, /*fill=*/true);
-        _hbox.pack_end(_scrollbar, /*expand=*/false, /*fill=*/false);
-        _vbox.pack_end(_hbox, /*expand=*/true, /*fill=*/true);
-        add(_vbox);
+//        _hbox.pack_start(_editor_overlay, /*expand=*/true, /*fill=*/true);
+//        _hbox.pack_end(_scrollbar, /*expand=*/false, /*fill=*/false);
+//        _vbox.pack_end(_hbox, /*expand=*/true, /*fill=*/true);
+//        add(_vbox);
 
         _vbox.show();
         _hbox.show();
         _editor_overlay.show();
         get_gl_widget().show();
 
-        _scrollbar.get_adjustment()->signal_value_changed().
-            connect(sigc::mem_fun(this, &GtkWindow::on_scrollbar_value_changed));
+//        _scrollbar.get_adjustment()->signal_value_changed().
+//            connect(sigc::mem_fun(this, &GtkWindow::on_scrollbar_value_changed));
 
         get_gl_widget().set_has_tooltip(true);
-        get_gl_widget().signal_query_tooltip().
-            connect(sigc::mem_fun(this, &GtkWindow::on_query_tooltip));
+//        get_gl_widget().signal_query_tooltip().
+//            connect(sigc::mem_fun(this, &GtkWindow::on_query_tooltip));
     }
 
     bool is_full_screen() const {
         return _is_fullscreen;
     }
 
-    Gtk::MenuBar *get_menu_bar() const {
+    Gtk::PopoverMenuBar *get_menu_bar() const {
         return _menu_bar;
     }
 
-    void set_menu_bar(Gtk::MenuBar *menu_bar) {
+    void set_menu_bar(Gtk::PopoverMenuBar *menu_bar) {
         if(_menu_bar) {
             _vbox.remove(*_menu_bar);
         }
         _menu_bar = menu_bar;
         if(_menu_bar) {
-            _menu_bar->show_all();
-            _vbox.pack_start(*_menu_bar, /*expand=*/false, /*fill=*/false);
+//            _menu_bar->show_all();
+//            _vbox.pack_start(*_menu_bar, /*expand=*/false, /*fill=*/false);
         }
     }
 
@@ -849,7 +861,7 @@ public:
         return _editor_overlay.get_gl_widget();
     }
 
-    Gtk::VScrollbar &get_scrollbar() {
+    Gtk::Scrollbar &get_scrollbar() {
         return _scrollbar;
     }
 
@@ -869,19 +881,22 @@ protected:
         return !_tooltip_text.empty() && (keyboard_tooltip || _is_under_cursor);
     }
 
-    bool on_enter_notify_event(GdkEventCrossing* gdk_event) override {
+//    bool on_enter_notify_event(GdkEventCrossing* gdk_event) override {
+    bool on_enter_notify_event(GdkEvent* gdk_event) {
         _is_under_cursor = true;
 
         return true;
     }
 
-    bool on_leave_notify_event(GdkEventCrossing* gdk_event) override {
+//    bool on_leave_notify_event(GdkEventCrossing* gdk_event) override {
+    bool on_leave_notify_event(GdkEvent* gdk_event) {
         _is_under_cursor = false;
 
         return true;
     }
 
-    bool on_delete_event(GdkEventAny* gdk_event) override {
+//    bool on_delete_event(GdkEventAny* gdk_event) override {
+    bool on_delete_event(GdkEvent* gdk_event) {
         if(_receiver->onClose) {
             _receiver->onClose();
             return true;
@@ -890,6 +905,7 @@ protected:
         return false;
     }
 
+/*
     bool on_window_state_event(GdkEventWindowState *gdk_event) override {
         // window state event is superseded by GdkWindow::state on GTK4
         GdkWindowState new_window_state;
@@ -902,7 +918,7 @@ protected:
 
         return true;
     }
-
+*/
     void on_scrollbar_value_changed() {
         if(_receiver->onScrollbarAdjusted) {
             _receiver->onScrollbarAdjusted(_scrollbar.get_adjustment()->get_value());
@@ -925,22 +941,22 @@ public:
                 break;
 
             case Kind::TOOL:
-                gtkWindow.set_type_hint(Gdk::WINDOW_TYPE_HINT_UTILITY);
-                gtkWindow.set_skip_taskbar_hint(true);
-                gtkWindow.set_skip_pager_hint(true);
+//                gtkWindow.set_type_hint(Gdk::WINDOW_TYPE_HINT_UTILITY);
+//                gtkWindow.set_skip_taskbar_hint(true);
+//                gtkWindow.set_skip_pager_hint(true);
                 break;
         }
 
         auto icon = LoadPng("freedesktop/solvespace-48x48.png");
-        auto gdkIcon =
-            Gdk::Pixbuf::create_from_data(&icon->data[0], Gdk::COLORSPACE_RGB,
-                                          icon->format == Pixmap::Format::RGBA, 8,
-                                          icon->width, icon->height, icon->stride);
-        gtkWindow.set_icon(gdkIcon->copy());
+//        auto gdkIcon =
+//            Gdk::Pixbuf::create_from_data(&icon->data[0], Gdk::COLORSPACE_RGB,
+//                                          icon->format == Pixmap::Format::RGBA, 8,
+//                                          icon->width, icon->height, icon->stride);
+//        gtkWindow.set_icon(gdkIcon->copy());
     }
 
     double GetPixelDensity() override {
-        return gtkWindow.get_screen()->get_resolution();
+//        return gtkWindow.get_screen()->get_resolution();
     }
 
     double GetDevicePixelRatio() override {
@@ -981,7 +997,7 @@ public:
 
     void SetMenuBar(MenuBarRef newMenuBar) override {
         if(newMenuBar) {
-            Gtk::MenuBar *gtkMenuBar = &((MenuBarImplGtk*)&*newMenuBar)->gtkMenuBar;
+            Gtk::PopoverMenuBar *gtkMenuBar = &((MenuBarImplGtk*)&*newMenuBar)->gtkMenuBar;
             gtkWindow.set_menu_bar(gtkMenuBar);
         } else {
             gtkWindow.set_menu_bar(NULL);
@@ -1002,8 +1018,8 @@ public:
         if(!gtkWindow.is_visible()) return;
 
         int left, top, width, height;
-        gtkWindow.get_position(left, top);
-        gtkWindow.get_size(width, height);
+//        gtkWindow.get_position(left, top);
+//        gtkWindow.get_size(width, height);
         bool isMaximized = gtkWindow.is_maximized();
 
         settings->FreezeInt(key + "_Left",       left);
@@ -1015,16 +1031,16 @@ public:
 
     void ThawPosition(SettingsRef settings, const std::string &key) override {
         int left, top, width, height;
-        gtkWindow.get_position(left, top);
-        gtkWindow.get_size(width, height);
+//        gtkWindow.get_position(left, top);
+//        gtkWindow.get_size(width, height);
 
         left   = settings->ThawInt(key + "_Left",   left);
         top    = settings->ThawInt(key + "_Top",    top);
         width  = settings->ThawInt(key + "_Width",  width);
         height = settings->ThawInt(key + "_Height", height);
 
-        gtkWindow.move(left, top);
-        gtkWindow.resize(width, height);
+//        gtkWindow.move(left, top);
+//        gtkWindow.resize(width, height);
 
         if(settings->ThawBool(key + "_Maximized", false)) {
             gtkWindow.maximize();
@@ -1039,11 +1055,11 @@ public:
             default: ssassert(false, "Unexpected cursor");
         }
 
-        auto gdkWindow = gtkWindow.get_gl_widget().get_window();
-        if(gdkWindow) {
-            gdkWindow->set_cursor(Gdk::Cursor::create(gdkWindow->get_display(), cursor_name.c_str()));
+//        auto gdkWindow = gtkWindow.get_gl_widget().get_window();
+//        if(gdkWindow) {
+//            gdkWindow->set_cursor(Gdk::Cursor::create(gdkWindow->get_display(), cursor_name.c_str()));
 //        gdkWindow->get_display()
-        }
+//        }
     }
 
     void SetTooltip(const std::string &text, double x, double y,
@@ -1146,7 +1162,7 @@ static void ProcessSpnavEvent(WindowImplGtk *window, const spnav_event &spnavEve
             break;
     }
 }
-
+/*
 static GdkFilterReturn GdkSpnavFilter(GdkXEvent *gdkXEvent, GdkEvent *gdkEvent, gpointer data) {
     XEvent *xEvent = (XEvent *)gdkXEvent;
     WindowImplGtk *window = (WindowImplGtk *)data;
@@ -1160,7 +1176,8 @@ static GdkFilterReturn GdkSpnavFilter(GdkXEvent *gdkXEvent, GdkEvent *gdkEvent, 
     }
     return GDK_FILTER_CONTINUE;
 }
-
+*/
+/*
 static gboolean ConsumeSpnavQueue(GIOChannel *, GIOCondition, gpointer data) {
     WindowImplGtk *window = (WindowImplGtk *)data;
     Glib::RefPtr<Gdk::Window> gdkWindow = window->gtkWindow.get_window();
@@ -1179,7 +1196,8 @@ static gboolean ConsumeSpnavQueue(GIOChannel *, GIOCondition, gpointer data) {
     }
     return TRUE;
 }
-
+*/
+/*
 void Request3DConnexionEventsForWindow(WindowRef window) {
     std::shared_ptr<WindowImplGtk> windowImpl =
         std::static_pointer_cast<WindowImplGtk>(window);
@@ -1206,6 +1224,7 @@ void Request3DConnexionEventsForWindow(WindowRef window) {
 #endif
 
 }
+*/
 #else
 void Request3DConnexionEventsForWindow(WindowRef window) {}
 #endif
@@ -1224,13 +1243,14 @@ public:
     Gtk::Image         gtkImage;
     Gtk::MessageDialog gtkDialog;
 
-    MessageDialogImplGtk(Gtk::Window &parent)
-        : gtkDialog(parent, "", /*use_markup=*/false, Gtk::MESSAGE_INFO,
-                    Gtk::BUTTONS_NONE, /*modal=*/true)
-    {
-        SetTitle("Message");
-    }
+//    MessageDialogImplGtk(Gtk::Window &parent)
+//        : gtkDialog(parent, "", /*use_markup=*/false, Gtk::MESSAGE_INFO,
+//                    Gtk::BUTTONS_NONE, /*modal=*/true)
+//    {
+//        SetTitle("Message");
+//    }
 
+/*
     void SetType(Type type) override {
         switch(type) {
             case Type::INFORMATION:
@@ -1251,7 +1271,7 @@ public:
         }
         gtkDialog.set_image(gtkImage);
     }
-
+*/
     void SetTitle(std::string title) override {
         gtkDialog.set_title(PrepareTitle(title));
     }
@@ -1268,10 +1288,10 @@ public:
         int responseId = 0;
         switch(response) {
             case Response::NONE:   ssassert(false, "Unexpected response");
-            case Response::OK:     responseId = Gtk::RESPONSE_OK;     break;
-            case Response::YES:    responseId = Gtk::RESPONSE_YES;    break;
-            case Response::NO:     responseId = Gtk::RESPONSE_NO;     break;
-            case Response::CANCEL: responseId = Gtk::RESPONSE_CANCEL; break;
+            case Response::OK:     responseId = GTK_RESPONSE_OK;     break;
+            case Response::YES:    responseId = GTK_RESPONSE_YES;    break;
+            case Response::NO:     responseId = GTK_RESPONSE_NO;     break;
+            case Response::CANCEL: responseId = GTK_RESPONSE_CANCEL; break;
         }
         gtkDialog.add_button(PrepareMnemonics(label), responseId);
         if(isDefault) {
@@ -1282,14 +1302,14 @@ public:
     Response ProcessResponse(int gtkResponse) {
         Response response;
         switch(gtkResponse) {
-            case Gtk::RESPONSE_OK:     response = Response::OK;     break;
-            case Gtk::RESPONSE_YES:    response = Response::YES;    break;
-            case Gtk::RESPONSE_NO:     response = Response::NO;     break;
-            case Gtk::RESPONSE_CANCEL: response = Response::CANCEL; break;
+            case GTK_RESPONSE_OK:     response = Response::OK;     break;
+            case GTK_RESPONSE_YES:    response = Response::YES;    break;
+            case GTK_RESPONSE_NO:     response = Response::NO;     break;
+            case GTK_RESPONSE_CANCEL: response = Response::CANCEL; break;
 
-            case Gtk::RESPONSE_NONE:
-            case Gtk::RESPONSE_CLOSE:
-            case Gtk::RESPONSE_DELETE_EVENT:
+            case GTK_RESPONSE_NONE:
+            case GTK_RESPONSE_CLOSE:
+            case GTK_RESPONSE_DELETE_EVENT:
                 response = Response::NONE;
                 break;
 
@@ -1318,7 +1338,7 @@ public:
     }
 
     Response RunModal() override {
-        return ProcessResponse(gtkDialog.run());
+//        return ProcessResponse(gtkDialog.run());
     }
 };
 
@@ -1338,8 +1358,8 @@ public:
 
     void InitFileChooser(Gtk::FileChooser &chooser) {
         gtkChooser = &chooser;
-        gtkChooser->property_filter().signal_changed().
-            connect(sigc::mem_fun(this, &FileDialogImplGtk::FilterChanged));
+//        gtkChooser->property_filter().signal_changed().
+//            connect(sigc::mem_fun(this, &FileDialogImplGtk::FilterChanged));
     }
 
     void SetCurrentName(std::string name) override {
@@ -1347,11 +1367,11 @@ public:
     }
 
     Platform::Path GetFilename() override {
-        return Path::From(gtkChooser->get_filename());
+//        return Path::From(gtkChooser->get_filename());
     }
 
     void SetFilename(Platform::Path path) override {
-        gtkChooser->set_filename(path.raw);
+//        gtkChooser->set_filename(path.raw);
     }
 
     void SuggestFilename(Platform::Path path) override {
@@ -1380,29 +1400,30 @@ public:
     }
 
     std::string GetExtension() {
-        auto filters = gtkChooser->list_filters();
-        size_t filterIndex =
-            std::find(filters.begin(), filters.end(), gtkChooser->get_filter()) -
-            filters.begin();
-        if(filterIndex < extensions.size()) {
-            return extensions[filterIndex];
-        } else {
-            return extensions.front();
-        }
+//        auto filters = gtkChooser->list_filters();
+//        size_t filterIndex =
+//            std::find(filters.begin(), filters.end(), gtkChooser->get_filter()) -
+//            filters.begin();
+//        if(filterIndex < extensions.size()) {
+//            return extensions[filterIndex];
+//        } else {
+//            return extensions.front();
+//        }
     }
 
     void SetExtension(std::string extension) {
-        auto filters = gtkChooser->list_filters();
+//        auto filters = gtkChooser->list_filters();
         size_t extensionIndex =
             std::find(extensions.begin(), extensions.end(), extension) -
             extensions.begin();
-        if(extensionIndex < filters.size()) {
+/*
+    if(extensionIndex < filters.size()) {
             gtkChooser->set_filter(filters[extensionIndex]);
         } else {
             gtkChooser->set_filter(filters.front());
         }
     }
-
+*/
 //TODO: This is not getting called when the extension selection is changed.
     void FilterChanged() {
         std::string extension = GetExtension();
