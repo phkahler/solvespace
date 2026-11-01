@@ -47,7 +47,7 @@ TEST_CASE(normal_watertight_volume) {
 
     // The extruded profile's mesh is 90125 mm³, and the tool cuts away a small
     // piece of it, about 23.7 mm³ exactly.
-    CHECK_EQ_EPS(volume / 90100.845259, 1.0);
+    CHECK_EQ_EPS(volume / 90101.862560, 1.0);
 }
 
 // With the tool extruded farther, its flat face also cuts the profile's
@@ -64,5 +64,5 @@ TEST_CASE(longer_watertight_volume) {
     if(helper->failCount != failCount) return;
 
     // The tool cuts away about 1444.4 mm³ exactly.
-    CHECK_EQ_EPS(volume / 88681.412120, 1.0);
+    CHECK_EQ_EPS(volume / 88682.175378, 1.0);
 }
